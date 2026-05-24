@@ -23,6 +23,7 @@ type ProjectChargerConnectorFormValues = {
 
 type ProjectChargerConnectorsFormProps = {
   chargerGroupId: string
+  chargerCount?: number | null
   connector?: ProjectChargerConnector
   submitLabel: string
   isSubmitting?: boolean
@@ -71,6 +72,7 @@ function toConnectorInput(
 
 export function ProjectChargerConnectorsForm({
   chargerGroupId,
+  chargerCount = null,
   connector,
   submitLabel,
   isSubmitting = false,
@@ -82,6 +84,13 @@ export function ProjectChargerConnectorsForm({
   const [values, setValues] = useState<ProjectChargerConnectorFormValues>(() =>
     getInitialValues(chargerGroupId, connector)
   )
+  const connectorCountPerCharger = numericToNull(
+    values.connector_count_per_charger
+  )
+  const suggestedConnectorTotal =
+    chargerCount !== null && connectorCountPerCharger !== null
+      ? chargerCount * connectorCountPerCharger
+      : null
 
   function updateValue(
     name: keyof ProjectChargerConnectorFormValues,
@@ -133,6 +142,11 @@ export function ProjectChargerConnectorsForm({
           label="Total Connectors"
           name="total_connector_count"
           value={values.total_connector_count}
+          helperText={
+            suggestedConnectorTotal !== null
+              ? `Suggested total: ${suggestedConnectorTotal}`
+              : undefined
+          }
           onChange={(value) => updateValue("total_connector_count", value)}
         />
       </div>
@@ -177,12 +191,14 @@ function NumberField({
   label,
   name,
   value,
+  helperText,
   onChange,
 }: {
   id: string
   label: string
   name: string
   value: string
+  helperText?: string
   onChange: (value: string) => void
 }) {
   return (
@@ -197,7 +213,7 @@ function NumberField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
+      {helperText && <p className="text-xs text-muted-foreground">{helperText}</p>}
     </div>
   )
 }
-

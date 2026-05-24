@@ -18,7 +18,9 @@ import {
 import { ProjectActionItems } from "@/components/action-items/project-action-items"
 import { PageHeader } from "@/components/page-header"
 import { ProjectChargers } from "@/components/project-chargers/project-chargers"
+import { ProjectDetailSummary } from "@/components/projects/project-detail-summary"
 import { ProjectFormSheet } from "@/components/projects/project-form-sheet"
+import type { ProjectFormSubmitInput } from "@/components/projects/project-form"
 import { ProjectRisks } from "@/components/risks/project-risks"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,7 +37,6 @@ import {
   isMissingSupabaseConfigError,
   updateProject,
   type Project,
-  type ProjectCreateInput,
 } from "@/lib/data/projects"
 
 type LoadState = "loading" | "ready" | "error" | "not_found"
@@ -75,12 +76,12 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
     return () => window.clearTimeout(timeout)
   }, [loadProject])
 
-  async function handleUpdateProject(input: ProjectCreateInput) {
+  async function handleUpdateProject(input: ProjectFormSubmitInput) {
     setIsSaving(true)
     setMutationError(null)
 
     try {
-      const updatedProject = await updateProject(projectId, input)
+      const updatedProject = await updateProject(projectId, input.project)
       setProject(updatedProject)
       setEditOpen(false)
     } catch (error) {
@@ -204,6 +205,8 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
         </div>
       )}
 
+      <ProjectDetailSummary project={project} />
+
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
         <Card>
           <CardHeader>
@@ -223,11 +226,6 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <ProfileField label="City" value={project.city} />
             <ProfileField label="Utility" value={project.utility} />
             <ProfileField label="Program" value={project.program} />
-            <ProfileField label="Charger type" value={project.charger_type} />
-            <ProfileField
-              label="Port count"
-              value={project.port_count?.toString() ?? null}
-            />
             <ProfileField label="Priority" value={project.priority} />
             <ProfileField label="Phase" value={project.phase} />
             <ProfileField label="Internal owner" value={project.internal_owner} />

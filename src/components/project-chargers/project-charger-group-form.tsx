@@ -6,6 +6,7 @@ import {
   chargerCategories,
   portConfigurations,
 } from "@/components/project-chargers/project-charger-options"
+import { getExpectedPortCount } from "@/components/project-chargers/project-charger-calculations"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -92,6 +93,15 @@ export function ProjectChargerGroupForm({
   const [values, setValues] = useState<ProjectChargerGroupFormValues>(() =>
     getInitialValues(project, chargerGroup)
   )
+  const suggestedPortCount = getExpectedPortCount({
+    chargerCount: numericToNull(values.charger_count),
+    portConfiguration: values.port_configuration,
+  })
+  const enteredPortCount = numericToNull(values.port_count)
+  const portCountMismatch =
+    suggestedPortCount !== null &&
+    enteredPortCount !== null &&
+    suggestedPortCount !== enteredPortCount
 
   function updateValue(name: keyof ProjectChargerGroupFormValues, value: string) {
     setValues((current) => ({
@@ -151,7 +161,7 @@ export function ProjectChargerGroupForm({
 
         <NumberField
           id={`${idPrefix}-power_rating_kw`}
-          label="Power Rating (kW)"
+          label="Rated Power per Charger (kW)"
           name="power_rating_kw"
           value={values.power_rating_kw}
           step="0.1"
@@ -159,16 +169,26 @@ export function ProjectChargerGroupForm({
         />
         <NumberField
           id={`${idPrefix}-charger_count`}
-          label="Charger Count"
+          label="Physical Chargers"
           name="charger_count"
           value={values.charger_count}
           onChange={(value) => updateValue("charger_count", value)}
         />
         <NumberField
           id={`${idPrefix}-port_count`}
-          label="Port Count"
+          label="Total Ports"
           name="port_count"
           value={values.port_count}
+          helperText={
+            suggestedPortCount !== null
+              ? `Suggested total ports: ${suggestedPortCount}`
+              : undefined
+          }
+          warningText={
+            portCountMismatch
+              ? "Entered total ports does not match the selected port configuration."
+              : undefined
+          }
           onChange={(value) => updateValue("port_count", value)}
         />
 
@@ -233,6 +253,8 @@ function NumberField({
   name,
   value,
   step = "1",
+  helperText,
+  warningText,
   onChange,
 }: {
   id: string
@@ -240,6 +262,8 @@ function NumberField({
   name: string
   value: string
   step?: string
+  helperText?: string
+  warningText?: string
   onChange: (value: string) => void
 }) {
   return (
@@ -254,7 +278,8 @@ function NumberField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
+      {helperText && <p className="text-xs text-muted-foreground">{helperText}</p>}
+      {warningText && <p className="text-xs text-amber-700">{warningText}</p>}
     </div>
   )
 }
-

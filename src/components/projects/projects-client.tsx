@@ -7,12 +7,12 @@ import {
   ArrowRight,
   CalendarDays,
   MapPin,
-  PlugZap,
   Plus,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
 import { ProjectFormSheet } from "@/components/projects/project-form-sheet"
+import type { ProjectFormSubmitInput } from "@/components/projects/project-form"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,8 +27,11 @@ import {
   getProjects,
   isMissingSupabaseConfigError,
   type Project,
-  type ProjectCreateInput,
 } from "@/lib/data/projects"
+import {
+  createProjectChargerConnector,
+  createProjectChargerGroup,
+} from "@/lib/data/project-chargers"
 
 type LoadState = "loading" | "ready" | "error"
 
@@ -59,13 +62,36 @@ export function ProjectsClient() {
     }
   }
 
-  async function handleCreateProject(input: ProjectCreateInput) {
+  async function handleCreateProject(input: ProjectFormSubmitInput) {
     setIsCreating(true)
     setMutationError(null)
 
     try {
-      const project = await createProject(input)
+      const project = await createProject(input.project)
       setProjects((current) => [project, ...current])
+
+      if (input.initialChargerGroup) {
+        try {
+          const chargerGroup = await createProjectChargerGroup({
+            ...input.initialChargerGroup.chargerGroup,
+            project_id: project.id,
+          })
+
+          for (const connector of input.initialChargerGroup.connectors) {
+            await createProjectChargerConnector({
+              ...connector,
+              charger_group_id: chargerGroup.id,
+            })
+          }
+        } catch (error) {
+          setCreateOpen(false)
+          setMutationError(
+            `Project created, but the initial charger group was not saved: ${getErrorMessage(error)}. Open the project detail page to add charger groups manually.`
+          )
+          return
+        }
+      }
+
       setCreateOpen(false)
       router.push(`/projects/${project.id}`)
     } catch (error) {
@@ -107,6 +133,12 @@ export function ProjectsClient() {
           />
         }
       />
+
+      {mutationError && !createOpen && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          {mutationError}
+        </div>
+      )}
 
       {loadState === "loading" && <ProjectsLoadingState />}
 
@@ -157,13 +189,6 @@ function ProjectCard({ project }: { project: Project }) {
             <MetaRow label="Program" value={project.program} />
             <MetaRow label="Phase" value={project.phase} />
             <MetaRow label="Priority" value={project.priority} />
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <PlugZap className="size-4" />
-            <span>
-              {project.charger_type ?? "No charger type set"} /{" "}
-              {project.port_count ?? "No"} ports
-            </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <CalendarDays className="size-4" />

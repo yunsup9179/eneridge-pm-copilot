@@ -1,8 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { BatteryCharging, Plus } from "lucide-react"
+import { AlertTriangle, BatteryCharging, Plus } from "lucide-react"
 
+import { getChargerGroupWarnings } from "@/components/project-chargers/project-charger-calculations"
 import { ProjectChargerGroupCard } from "@/components/project-chargers/project-charger-group-card"
 import { ProjectChargerGroupFormSheet } from "@/components/project-chargers/project-charger-group-form-sheet"
 import { Badge } from "@/components/ui/badge"
@@ -220,6 +221,10 @@ export function ProjectChargers({ project }: { project: Project }) {
         .filter((category): category is string => Boolean(category))
     )
   ).join(" + ")
+  const connectorBreakdown = getConnectorBreakdown(chargerGroups)
+  const hasCountWarnings = chargerGroups.some(
+    (group) => getChargerGroupWarnings(group).length > 0
+  )
 
   return (
     <Card>
@@ -284,11 +289,23 @@ export function ProjectChargers({ project }: { project: Project }) {
         )}
 
         {loadState === "ready" && chargerGroups.length > 0 && (
-          <div className="grid gap-3 rounded-lg bg-muted/40 p-3 text-sm sm:grid-cols-3">
-            <SummaryMetric label="Total Chargers" value={totalChargers.toString()} />
-            <SummaryMetric label="Total Ports" value={totalPorts.toString()} />
-            <SummaryMetric label="Charger Mix" value={chargerMix || "Not set"} />
-          </div>
+          <>
+            <div className="grid gap-3 rounded-lg border bg-muted/30 p-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+              <SummaryMetric label="Total Chargers" value={totalChargers.toString()} />
+              <SummaryMetric label="Total Ports" value={totalPorts.toString()} />
+              <SummaryMetric label="Charger Mix" value={chargerMix || "Not set"} />
+              <SummaryMetric
+                label="Connector Breakdown"
+                value={connectorBreakdown || "Not set"}
+              />
+            </div>
+            {hasCountWarnings && (
+              <div className="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>Some charger group counts need review.</span>
+              </div>
+            )}
+          </>
         )}
 
         {loadState === "loading" && (
@@ -343,16 +360,38 @@ export function ProjectChargers({ project }: { project: Project }) {
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-start gap-3 rounded-lg bg-background/70 p-3">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
         <BatteryCharging className="size-4" />
       </span>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="truncate text-sm font-medium">{value}</p>
+        <p className="mt-1 text-base font-semibold leading-snug">{value}</p>
       </div>
     </div>
   )
+}
+
+function getConnectorBreakdown(groups: ProjectChargerGroupWithConnectors[]) {
+  const totalsByType = new Map<string, number>()
+
+  for (const group of groups) {
+    for (const connector of group.connectors) {
+      if (connector.total_connector_count === null) {
+        continue
+      }
+
+      const type = connector.connector_type ?? "Unspecified"
+      totalsByType.set(
+        type,
+        (totalsByType.get(type) ?? 0) + connector.total_connector_count
+      )
+    }
+  }
+
+  return Array.from(totalsByType.entries())
+    .map(([type, total]) => `${type}: ${total}`)
+    .join(", ")
 }
 
 function getErrorMessage(error: unknown) {
@@ -362,4 +401,3 @@ function getErrorMessage(error: unknown) {
 
   return error instanceof Error ? error.message : "Unexpected charger error."
 }
-

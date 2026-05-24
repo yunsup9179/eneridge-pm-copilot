@@ -88,7 +88,7 @@ The script creates clearly marked temporary QA records for a project, action ite
 - Projects CRUD is implemented against Supabase with loading, empty, error, create, edit, and delete states.
 - Action Items CRUD is implemented against Supabase globally and inside project detail pages.
 - Risks CRUD is implemented against Supabase globally and inside project detail pages.
-- Project charger groups and connector details are implemented inside project detail pages.
+- Project charger groups and connector details are implemented inside project detail pages, and project creation can optionally seed an initial charger group.
 - The dashboard reads live Supabase projects, action items, and risks.
 - Documents, contacts, and AI workspace remain placeholders.
 - AI features have not been implemented yet.

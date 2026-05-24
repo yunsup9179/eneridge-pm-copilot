@@ -441,3 +441,183 @@ Temporary QA run marker: `QA_STEP_4C_1779602462412`.
 
 - Step 5 Documents is safe to start from the current QA results.
 
+## Step 4C UX Cleanup - Initial Charger Group on Project Create - 2026-05-23
+
+### Objective
+
+Make Project Charger Groups the primary UI source of truth for charger information by removing legacy `projects.charger_type` and `projects.port_count` from project create/edit, project list, and project overview surfaces.
+
+### Summary of Implementation
+
+- Removed legacy `charger_type` and `port_count` fields from the Project create/edit form.
+- Added a Project Information section that keeps project create/edit focused on core project metadata.
+- Added an optional Initial Charger Group section to the Project create workflow.
+- Added support for multiple optional initial connector rows during project creation.
+- Updated project creation to create the project first, then create the initial charger group and connector rows when provided.
+- If initial charger creation fails after the project is created, the project is preserved and a clear warning is shown.
+- Kept project edit focused on Project Information only; charger groups remain edited from the Charger Groups section on project detail.
+- Removed legacy charger fields from the primary Project Overview display.
+- Removed legacy charger fields from project list cards.
+- No database schema changes were made.
+
+### Files Modified
+
+- `src/components/projects/project-form.tsx`
+- `src/components/projects/project-form-sheet.tsx`
+- `src/components/projects/projects-client.tsx`
+- `src/components/projects/project-detail-client.tsx`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/projects`
+- `/projects/[id]`
+
+### Components Changed
+
+- `ProjectForm`
+- `ProjectFormSheet`
+- `ProjectsClient`
+- `ProjectDetailClient`
+
+### Data Access Functions Changed
+
+- No data access functions were changed.
+- Existing `createProject`, `createProjectChargerGroup`, and `createProjectChargerConnector` functions are now composed in the project create workflow.
+
+### Validation Results
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- Sandboxed `npm run qa:step4c` failed due to DNS/network sandboxing before creating records.
+- Network-approved `npm run qa:step4c` passed.
+- QA run marker: `QA_STEP_4C_1779604084205`.
+- Temporary QA project, action item, risk, 4 charger groups, and 5 connector rows were created, verified, updated, and deleted by the QA script.
+
+### Known Issues Or Limitations
+
+- Initial Charger Group creation is not transactional with project creation. If charger group or connector creation fails after the project row is created, the project remains and the UI shows a warning.
+- Existing legacy `projects.charger_type` and `projects.port_count` values remain in the database but are hidden from primary UI.
+- Project list charger rollups remain intentionally unchanged.
+- Connector totals remain manually entered.
+
+### Recommended Next Task
+
+- Start Step 5 Documents CRUD and file upload support.
+
+## Step 4C UX Cleanup - Charger Count Validation - 2026-05-23
+
+### Objective
+
+Improve Project Charger Groups and Connector Details UX with clearer numeric labels, calculated helper values, and warning-only validation for inconsistent charger, port, and connector counts.
+
+### Summary of Implementation
+
+- Added shared charger count helper calculations for expected ports, connector totals, and warning messages.
+- Renamed charger group display/form labels to clarify meaning:
+  - `Rated Power per Charger (kW)`
+  - `Physical Chargers`
+  - `Total Ports`
+  - `Port Configuration`
+- Added suggested total ports in charger group forms for Single Port and Dual Port configurations.
+- Added suggested connector totals when physical charger count and connector count per charger are available.
+- Added charger group card metrics for Entered Total Ports, Connector Total, and Expected Ports.
+- Added warning UI when entered total ports do not match selected Single/Dual Port configuration.
+- Added warning UI when connector totals do not match total ports.
+- Added Charger Groups summary warning when any group needs count review.
+- Kept all validations warning-only to allow real EVSE exceptions.
+- No database schema changes were made.
+
+### Files Modified
+
+- `src/components/project-chargers/project-charger-calculations.ts`
+- `src/components/project-chargers/project-charger-group-form.tsx`
+- `src/components/project-chargers/project-charger-connectors-form.tsx`
+- `src/components/project-chargers/project-charger-group-card.tsx`
+- `src/components/project-chargers/project-chargers.tsx`
+- `src/components/projects/project-form.tsx`
+- `DEV_LOG.md`
+
+### Components Changed
+
+- `ProjectChargerGroupForm`
+- `ProjectChargerConnectorsForm`
+- `ProjectChargerGroupCard`
+- `ProjectChargers`
+- `ProjectForm` initial charger group section
+
+### Validation Logic Added
+
+- Expected ports:
+  - Single Port = `charger_count * 1`
+  - Dual Port = `charger_count * 2`
+  - Mixed = manual / mixed configuration
+  - Other = manual / other configuration
+- Connector total = sum of `total_connector_count` across connector rows.
+- Warning: `Entered total ports does not match the selected port configuration.`
+- Warning: `Connector totals do not match total ports.`
+- Summary warning: `Some charger group counts need review.`
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- Network-approved `npm run qa:step4c` passed.
+- QA run marker: `QA_STEP_4C_1779604826021`.
+- Temporary QA project, action item, risk, 4 charger groups, and 5 connector rows were created, verified, updated, and deleted by the QA script.
+
+### Known Limitations
+
+- Validation remains warning-only and does not block saves.
+- Mixed and Other port configurations do not compute an expected port count.
+- Suggested totals are helper text only and do not overwrite manually entered values.
+- The existing Step 4C QA script validates CRUD and numeric persistence, not browser-rendered warning visibility.
+
+### Recommended Next Task
+
+- Start Step 5 Documents CRUD and file upload support.
+
+## Step 4D: Project Detail UX Readability Improvements - 2026-05-23
+
+### Objective
+
+Improve the Project Detail page readability and information hierarchy before moving to Step 5 Documents, without changing the database schema or CRUD behavior.
+
+### Summary of Improvements
+
+- Added a top Project Snapshot summary bar with status, phase, total chargers, total ports, open action items, open / high risks, and target COD.
+- Improved the Charger Groups summary with larger metrics for total chargers, total ports, charger mix, and connector breakdown.
+- Added connector breakdown aggregation across charger groups, such as `CCS1: 6` or `NACS / J3400: 6`.
+- Improved charger group card spacing, hierarchy, and value typography for charger model, category, rated power, physical chargers, total ports, port configuration, and connector details.
+- Kept existing warning-only validation visible for mismatched port totals and connector totals.
+- Kept Documents, Contacts, and AI Notes as placeholders.
+- No database schema changes were made.
+
+### Files Modified
+
+- `src/components/projects/project-detail-summary.tsx`
+- `src/components/projects/project-detail-client.tsx`
+- `src/components/project-chargers/project-chargers.tsx`
+- `src/components/project-chargers/project-charger-group-card.tsx`
+- `DEV_LOG.md`
+
+### Validation Results
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- QA run marker: `QA_STEP_4C_1779605727334`.
+- Temporary QA project, action item, risk, 4 charger groups, and 5 connector rows were created, verified, updated, and deleted by the QA script.
+- Browser DOM smoke check on `/projects/c34514cb-b5a0-44c9-adf9-88f4bdb76d19` confirmed Project Snapshot, Charger Groups, Connector Breakdown, connector details, Action Items, Risks, and placeholder sections render.
+
+### Known Limitations
+
+- The top Project Snapshot loads rollup values independently from the child sections; edits made inside charger groups, action items, or risks may require a page refresh before the snapshot reflects the latest counts.
+- Connector breakdown only includes connector rows with `total_connector_count` set.
+- Browser DOM smoke testing was run, but screenshot capture timed out in the in-app browser during this pass.
+
+### Recommended Next Task
+
+- Start Step 5 Documents CRUD and file upload support.

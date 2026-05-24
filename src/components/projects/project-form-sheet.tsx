@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react"
 
-import type { Project, ProjectCreateInput } from "@/lib/data/projects"
-import { ProjectForm } from "@/components/projects/project-form"
+import type { Project } from "@/lib/data/projects"
+import { ProjectForm, type ProjectFormSubmitInput } from "@/components/projects/project-form"
 import {
   Sheet,
   SheetContent,
@@ -23,7 +23,7 @@ type ProjectFormSheetProps = {
   project?: Project
   trigger?: ReactNode
   onOpenChange: (open: boolean) => void
-  onSubmit: (input: ProjectCreateInput) => void
+  onSubmit: (input: ProjectFormSubmitInput) => void
 }
 
 export function ProjectFormSheet({
@@ -43,7 +43,7 @@ export function ProjectFormSheet({
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
       <SheetContent
         side="right"
-        className="w-full overflow-y-auto p-0 sm:max-w-2xl"
+        className="w-full overflow-y-auto p-0 sm:max-w-3xl"
       >
         <SheetHeader className="border-b text-left">
           <SheetTitle>{title}</SheetTitle>
