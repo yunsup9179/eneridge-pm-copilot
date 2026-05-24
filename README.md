@@ -38,13 +38,24 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 ## Supabase Setup Note
 
-The initial SQL schema is available at `supabase/schema.sql`. Apply it in the Supabase SQL editor or through the Supabase CLI before using live CRUD screens. The browser Supabase client factory is defined in `src/lib/supabase/client.ts`. Database types are stubbed in `src/lib/supabase/types.ts` and should be replaced with generated Supabase types once the schema is finalized.
+The initial SQL schema is available at `supabase/schema.sql`. Apply it in the Supabase SQL editor or through the Supabase CLI before using live CRUD screens. For an existing live Supabase project, apply additive migration files such as `supabase/step-4c-charger-groups.sql` instead of re-running the full schema. The browser Supabase client factory is defined in `src/lib/supabase/client.ts`. Database types are stubbed in `src/lib/supabase/types.ts` and should be replaced with generated Supabase types once the schema is finalized.
+
+
+## QA Commands
+
+Run the Step 4C live CRUD stabilization check after applying `supabase/step-4c-charger-groups.sql` to the live Supabase project:
+
+```bash
+npm run qa:step4c
+```
+
+The script creates clearly marked temporary QA records for a project, action item, risk, charger groups, and connector rows, verifies reads and updates, then deletes only the records it created.
 
 ## App Structure
 
-- `src/app/page.tsx` - dashboard with project-centered placeholder data
+- `src/app/page.tsx` - live dashboard rollups for projects, action items, and risks
 - `src/app/projects` - live project register with create workflow
-- `src/app/projects/[id]` - live project detail with edit, delete, action item, and risk workflows
+- `src/app/projects/[id]` - live project detail with edit, delete, charger group, action item, and risk workflows
 - `src/app/actions` - live global action items page with create, edit, complete, delete, and filters
 - `src/app/risks` - live global risks page with create, edit, close, delete, and filters
 - `src/app/documents` - document library page
@@ -56,14 +67,17 @@ The initial SQL schema is available at `supabase/schema.sql`. Apply it in the Su
 - `src/components/projects` - project CRUD screens and form components
 - `src/components/action-items` - action item CRUD screens, cards, and form components
 - `src/components/risks` - risk CRUD screens, cards, and form components
+- `src/components/project-chargers` - project charger group and connector detail components
 - `src/components/placeholder-page.tsx` - shared placeholder page template
 - `src/config/navigation.ts` - primary navigation configuration
 - `src/lib/data/projects.ts` - Supabase project data access layer
 - `src/lib/data/action-items.ts` - Supabase action item data access layer
 - `src/lib/data/risks.ts` - Supabase risk data access layer
+- `src/lib/data/project-chargers.ts` - Supabase charger group and connector data access layer
 - `src/lib/supabase` - Supabase client and type stubs
 - `src/lib/sample-data.ts` - placeholder project data for UI scaffolding
 - `supabase/schema.sql` - initial database schema
+- `supabase/step-4c-charger-groups.sql` - additive migration for charger groups and connector details
 
 ## Current Project Status
 
@@ -74,12 +88,15 @@ The initial SQL schema is available at `supabase/schema.sql`. Apply it in the Su
 - Projects CRUD is implemented against Supabase with loading, empty, error, create, edit, and delete states.
 - Action Items CRUD is implemented against Supabase globally and inside project detail pages.
 - Risks CRUD is implemented against Supabase globally and inside project detail pages.
+- Project charger groups and connector details are implemented inside project detail pages.
+- The dashboard reads live Supabase projects, action items, and risks.
 - Documents, contacts, and AI workspace remain placeholders.
 - AI features have not been implemented yet.
 
 ## Next Development Steps
 
 - Replace stubbed database types with generated Supabase types.
+- Apply `supabase/step-4c-charger-groups.sql` in the live Supabase SQL Editor if the live database has not received Step 4C yet.
 - Implement Documents CRUD and file upload support.
 - Implement Contacts CRUD and project-contact relationships.
 - Add dashboard rollups for open and overdue action items plus active and critical risks.

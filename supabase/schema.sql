@@ -103,6 +103,33 @@ create table if not exists public.ai_analysis_logs (
   created_at timestamptz default now()
 );
 
+
+
+create table if not exists public.project_charger_groups (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.projects(id) on delete cascade,
+  charger_model text,
+  charger_category text,
+  power_rating_kw numeric,
+  charger_count integer,
+  port_count integer,
+  port_configuration text,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.project_charger_connectors (
+  id uuid primary key default gen_random_uuid(),
+  charger_group_id uuid references public.project_charger_groups(id) on delete cascade,
+  connector_type text,
+  connector_count_per_charger integer,
+  total_connector_count integer,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 create table if not exists public.project_contacts (
   project_id uuid references public.projects(id) on delete cascade,
   contact_id uuid references public.contacts(id) on delete cascade,
@@ -130,6 +157,13 @@ create index if not exists ai_analysis_logs_document_id_idx
 
 create index if not exists project_contacts_contact_id_idx
   on public.project_contacts(contact_id);
+
+create index if not exists project_charger_groups_project_id_idx
+  on public.project_charger_groups(project_id);
+
+create index if not exists project_charger_connectors_charger_group_id_idx
+  on public.project_charger_connectors(charger_group_id);
+
 
 create or replace function public.set_updated_at()
 returns trigger as $$
@@ -168,3 +202,102 @@ create trigger set_documents_updated_at
   before update on public.documents
   for each row
   execute function public.set_updated_at();
+
+drop trigger if exists set_project_charger_groups_updated_at on public.project_charger_groups;
+create trigger set_project_charger_groups_updated_at
+  before update on public.project_charger_groups
+  for each row
+  execute function public.set_updated_at();
+
+drop trigger if exists set_project_charger_connectors_updated_at on public.project_charger_connectors;
+create trigger set_project_charger_connectors_updated_at
+  before update on public.project_charger_connectors
+  for each row
+  execute function public.set_updated_at();
+
+
+-- Development RLS policies for the browser-based MVP.
+-- These allow the public anon key to perform CRUD until authentication is added.
+-- Replace these policies with user/team-scoped access rules before production use.
+
+alter table public.projects enable row level security;
+alter table public.action_items enable row level security;
+alter table public.risks enable row level security;
+alter table public.contacts enable row level security;
+alter table public.documents enable row level security;
+alter table public.ai_analysis_logs enable row level security;
+alter table public.project_contacts enable row level security;
+alter table public.project_charger_groups enable row level security;
+alter table public.project_charger_connectors enable row level security;
+
+drop policy if exists "Allow anon CRUD on projects" on public.projects;
+create policy "Allow anon CRUD on projects"
+  on public.projects
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on action_items" on public.action_items;
+create policy "Allow anon CRUD on action_items"
+  on public.action_items
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on risks" on public.risks;
+create policy "Allow anon CRUD on risks"
+  on public.risks
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on contacts" on public.contacts;
+create policy "Allow anon CRUD on contacts"
+  on public.contacts
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on documents" on public.documents;
+create policy "Allow anon CRUD on documents"
+  on public.documents
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on ai_analysis_logs" on public.ai_analysis_logs;
+create policy "Allow anon CRUD on ai_analysis_logs"
+  on public.ai_analysis_logs
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on project_contacts" on public.project_contacts;
+create policy "Allow anon CRUD on project_contacts"
+  on public.project_contacts
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on project_charger_groups" on public.project_charger_groups;
+create policy "Allow anon CRUD on project_charger_groups"
+  on public.project_charger_groups
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on project_charger_connectors" on public.project_charger_connectors;
+create policy "Allow anon CRUD on project_charger_connectors"
+  on public.project_charger_connectors
+  for all
+  to anon
+  using (true)
+  with check (true);

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "qa:step4c": "node scripts/qa-step-4c.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",

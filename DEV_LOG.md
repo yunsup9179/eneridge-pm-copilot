@@ -209,3 +209,235 @@ Implement live Supabase CRUD for project-linked risks while keeping the scope li
 ### Recommended Next Task
 
 - Implement Documents CRUD and file upload support, then connect risk records to related documents.
+
+## Step 4C: Project Charger Groups and Connector Details - 2026-05-23
+
+### Objective
+
+Add project-level charger group management and connector detail management while preserving projects as the parent entity and keeping existing project charger summary fields as legacy/general fields.
+
+### Summary of Implementation
+
+- Added two additive Supabase tables for charger configurations and connector rows.
+- Added typed Supabase table stubs for `project_charger_groups` and `project_charger_connectors`.
+- Added a charger data access layer with CRUD functions for charger groups and connector rows.
+- Added project detail UI for charger groups, including create, edit, and delete workflows.
+- Added connector row create, edit, and delete workflows inside each charger group card.
+- Added manual decimal kW input support for ratings such as 7.2, 11.5, 19.2, and larger DCFC ratings.
+- Kept `/projects` list summary unchanged for this step to avoid adding separate rollup complexity.
+- Preserved all existing tables and columns. No existing project fields were removed, renamed, or recreated.
+
+### Files Created
+
+- `src/lib/data/project-chargers.ts`
+- `src/components/project-chargers/project-charger-group-card.tsx`
+- `src/components/project-chargers/project-charger-group-form.tsx`
+- `src/components/project-chargers/project-charger-group-form-sheet.tsx`
+- `src/components/project-chargers/project-chargers.tsx`
+- `src/components/project-chargers/project-charger-options.ts`
+- `src/components/project-chargers/project-charger-connectors-form.tsx`
+- `supabase/step-4c-charger-groups.sql`
+
+### Files Modified
+
+- `supabase/schema.sql`
+- `supabase/rls-policies.sql`
+- `src/lib/supabase/types.ts`
+- `src/components/projects/project-detail-client.tsx`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/projects/[id]`
+
+### Database Tables Affected
+
+- Added `project_charger_groups`.
+- Added `project_charger_connectors`.
+- Existing `projects` remains the parent table through foreign keys.
+- Existing legacy/general `projects.charger_type` and `projects.port_count` fields were preserved.
+
+### Schema Migration Note
+
+The live Supabase database already exists, so do not rely on re-running the full `supabase/schema.sql` file. Apply the additive migration in Supabase SQL Editor. The migration file is `supabase/step-4c-charger-groups.sql`.
+
+Required additive SQL:
+
+```sql
+create table if not exists public.project_charger_groups (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.projects(id) on delete cascade,
+  charger_model text,
+  charger_category text,
+  power_rating_kw numeric,
+  charger_count integer,
+  port_count integer,
+  port_configuration text,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists project_charger_groups_project_id_idx
+  on public.project_charger_groups(project_id);
+
+drop trigger if exists set_project_charger_groups_updated_at on public.project_charger_groups;
+create trigger set_project_charger_groups_updated_at
+  before update on public.project_charger_groups
+  for each row
+  execute function public.set_updated_at();
+
+create table if not exists public.project_charger_connectors (
+  id uuid primary key default gen_random_uuid(),
+  charger_group_id uuid references public.project_charger_groups(id) on delete cascade,
+  connector_type text,
+  connector_count_per_charger integer,
+  total_connector_count integer,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists project_charger_connectors_charger_group_id_idx
+  on public.project_charger_connectors(charger_group_id);
+
+drop trigger if exists set_project_charger_connectors_updated_at on public.project_charger_connectors;
+create trigger set_project_charger_connectors_updated_at
+  before update on public.project_charger_connectors
+  for each row
+  execute function public.set_updated_at();
+```
+
+For the current browser-based MVP using the public anon client, `supabase/step-4c-charger-groups.sql` also includes development RLS policies for the new tables. Replace those policies with user/team-scoped policies before production use.
+
+### Components Changed
+
+- Added `ProjectChargers` to the project detail page.
+- Added charger group cards with summary metrics and nested connector rows.
+- Added charger group form sheet with locked project context.
+- Added connector row form for nested connector management.
+
+### Data Access Functions Added Or Changed
+
+- `getProjectChargerGroups()`
+- `getProjectChargerGroupsByProjectId(projectId: string)`
+- `getProjectChargerGroupById(id: string)`
+- `createProjectChargerGroup(input)`
+- `updateProjectChargerGroup(id, input)`
+- `deleteProjectChargerGroup(id)`
+- `getConnectorsByChargerGroupId(chargerGroupId: string)`
+- `createProjectChargerConnector(input)`
+- `updateProjectChargerConnector(id, input)`
+- `deleteProjectChargerConnector(id)`
+- `getProjectChargerGroupsWithConnectorsByProjectId(projectId: string)`
+
+### Validation Results
+
+- `npm run lint` passed.
+- `npm run build` passed.
+
+### Known Issues Or Limitations
+
+- Connector totals are manually entered; no automatic total calculation is enforced yet.
+- Charger groups are only surfaced on project detail pages in Step 4C.
+- `/projects` charger rollups were intentionally left unchanged to keep this step focused.
+- Policies in the migration are development policies for the anon client and should be replaced before production use.
+- Generated Supabase types still need to replace the hand-maintained type stub later.
+
+### Recommended Next Task
+
+- Move to Step 5 Documents CRUD and file upload support, then connect documents to risks and future AI extraction workflows.
+
+## Step 4C QA Stabilization - 2026-05-23
+
+### What Was Tested
+
+- Static app validation with lint and production build.
+- Supabase environment variable presence for `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- `supabase/step-4c-charger-groups.sql` existence and additive-only safety scan.
+- Live Supabase CRUD for `projects`, `action_items`, `risks`, `project_charger_groups`, and `project_charger_connectors`.
+- Decimal charger power ratings for `7.2`, `11.5`, and `19.2` kW.
+- Charger group cases for dual-port Level 2, dual-port DCFC with CCS1 plus NACS / J3400, single-port Level 2, and mixed Level 2 configuration.
+- Update paths for one project, action item, risk, charger group, and connector row.
+- Project detail UI code for project overview, charger groups, connector details, action items, risks, and Documents/Contacts/AI Notes placeholders.
+
+### Lint Result
+
+- `npm run lint` passed.
+
+### Build Result
+
+- `npm run build` passed.
+
+### Live Supabase CRUD QA
+
+- Live QA was run with `npm run qa:step4c`.
+- First sandboxed attempt failed with DNS/network sandboxing: `getaddrinfo ENOTFOUND uzwalzblmrwtgfgwkxcy.supabase.co`.
+- Rerun with network access passed.
+- Result: `QA STEP 4C RESULT: PASS`.
+
+### Migration File Validation
+
+- `supabase/step-4c-charger-groups.sql` exists.
+- Additive-only scan passed.
+- Confirmed expected SQL patterns:
+  - `create table if not exists public.project_charger_groups`
+  - `create table if not exists public.project_charger_connectors`
+  - `create index if not exists`
+  - `drop trigger if exists` / `create trigger`
+- Confirmed no destructive patterns in the migration file:
+  - no `drop table`
+  - no `truncate`
+  - no `delete from`
+
+### Live Supabase Table Availability
+
+- `project_charger_groups` is available in live Supabase.
+- `project_charger_connectors` is available in live Supabase.
+- The live CRUD run confirmed the Step 4C migration has been applied or equivalent tables/policies already exist.
+
+### QA Script
+
+- Added `scripts/qa-step-4c.mjs`.
+- Added package command: `npm run qa:step4c`.
+- No new dependency was added; the script uses plain Node and the existing `@supabase/supabase-js` dependency.
+
+### Test Records Created
+
+Temporary QA run marker: `QA_STEP_4C_1779602462412`.
+
+- Project: `996dd8a3-b207-4afd-92fd-ffe1baee4fdd`
+- Action item: `6a2811ef-cdb7-4403-b2e4-abaab2c93b98`
+- Risk: `adbc89e0-9fbc-4659-921a-b930407d65ec`
+- Charger groups: 4
+- Connector rows: 5
+
+### Test Records Deleted
+
+- The QA script cleanup completed successfully for records created by the run.
+- Cleanup only targeted IDs created during the run.
+- No existing user-created data was deleted.
+
+### Issues Found
+
+- No application, schema, RLS, or CRUD issues were found during the approved live QA run.
+- The only failed attempt was caused by local sandbox DNS/network restrictions, not Supabase or application behavior.
+
+### Fixes Made
+
+- Added a reusable self-cleaning QA script for Step 4C.
+- Added `npm run qa:step4c` to `package.json`.
+- Added README documentation for the QA command.
+
+### Remaining Known Limitations
+
+- `/projects` charger rollups remain intentionally unchanged from Step 4C.
+- Connector totals remain manually entered; no automatic calculation is enforced yet.
+- Development anon RLS policies are still suitable only for the MVP and should be replaced before production authentication/authorization.
+- Supabase types are still hand-maintained stubs and should later be replaced with generated types.
+
+### Step 5 Readiness
+
+- Step 5 Documents is safe to start from the current QA results.
+

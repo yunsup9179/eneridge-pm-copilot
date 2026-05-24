@@ -17,6 +17,7 @@ import {
 
 import { ProjectActionItems } from "@/components/action-items/project-action-items"
 import { PageHeader } from "@/components/page-header"
+import { ProjectChargers } from "@/components/project-chargers/project-chargers"
 import { ProjectFormSheet } from "@/components/projects/project-form-sheet"
 import { ProjectRisks } from "@/components/risks/project-risks"
 import { Badge } from "@/components/ui/badge"
@@ -257,6 +258,8 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
           </CardContent>
         </Card>
       </section>
+
+      <ProjectChargers project={project} />
 
       <ProjectActionItems project={project} />
 

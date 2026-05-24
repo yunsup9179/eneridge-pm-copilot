@@ -72,6 +72,96 @@ export type Database = {
         }
         Relationships: []
       }
+
+      project_charger_groups: {
+        Row: {
+          id: string
+          project_id: string | null
+          charger_model: string | null
+          charger_category: string | null
+          power_rating_kw: number | null
+          charger_count: number | null
+          port_count: number | null
+          port_configuration: string | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          charger_model?: string | null
+          charger_category?: string | null
+          power_rating_kw?: number | null
+          charger_count?: number | null
+          port_count?: number | null
+          port_configuration?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          charger_model?: string | null
+          charger_category?: string | null
+          power_rating_kw?: number | null
+          charger_count?: number | null
+          port_count?: number | null
+          port_configuration?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_charger_groups_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_charger_connectors: {
+        Row: {
+          id: string
+          charger_group_id: string | null
+          connector_type: string | null
+          connector_count_per_charger: number | null
+          total_connector_count: number | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          charger_group_id?: string | null
+          connector_type?: string | null
+          connector_count_per_charger?: number | null
+          total_connector_count?: number | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          charger_group_id?: string | null
+          connector_type?: string | null
+          connector_count_per_charger?: number | null
+          total_connector_count?: number | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_charger_connectors_charger_group_id_fkey"
+            columns: ["charger_group_id"]
+            referencedRelation: "project_charger_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       action_items: {
         Row: {
           id: string

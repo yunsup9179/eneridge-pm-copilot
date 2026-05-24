@@ -32,6 +32,12 @@ export function isMissingSupabaseConfigError(
   return error instanceof ProjectDataError && error.code === "missing_config"
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value)
+}
+
 function getSupabaseClientOrThrow() {
   if (!isSupabaseConfigured()) {
     throw new ProjectDataError(getSupabaseConfigMessage(), "missing_config")
@@ -55,6 +61,10 @@ export async function getProjects() {
 }
 
 export async function getProjectById(id: string) {
+  if (!isUuid(id)) {
+    throw new ProjectDataError("Project not found.", "not_found")
+  }
+
   const supabase = getSupabaseClientOrThrow()
   const { data, error } = await supabase
     .from("projects")
