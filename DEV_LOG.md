@@ -621,3 +621,895 @@ Improve the Project Detail page readability and information hierarchy before mov
 ### Recommended Next Task
 
 - Start Step 5 Documents CRUD and file upload support.
+
+## Step 5: Documents CRUD + Supabase Storage Upload - 2026-05-24
+
+### Objective
+
+Implement project-linked Documents CRUD and Supabase Storage upload support using the `project-documents` bucket, while leaving AI extraction fields unpopulated for now.
+
+### Summary of Implementation
+
+- Added a document data access layer for document CRUD, project-scoped queries, Supabase Storage upload, storage file removal, and signed URL generation.
+- Replaced the `/documents` placeholder page with a live document library.
+- Added document create, edit, delete, filter, and open-file workflows.
+- Added project-scoped documents to the Project Detail page.
+- Added graceful partial-failure handling:
+  - If document row creation fails after upload, the newly uploaded file is cleaned up where possible.
+  - If document deletion succeeds but storage cleanup fails, the UI reports a clear warning.
+  - If the `project-documents` bucket is missing, upload/open flows show a helpful message.
+- Added additive Supabase Storage setup SQL for the `project-documents` bucket and development anon storage policy.
+- Added a Step 5 QA script for temporary project creation, storage upload, document metadata CRUD, signed URL generation, storage cleanup, and project cleanup.
+- AI fields remain intentionally unused in this step.
+
+### Files Created
+
+- `src/lib/data/documents.ts`
+- `src/components/documents/document-card.tsx`
+- `src/components/documents/document-form.tsx`
+- `src/components/documents/document-form-sheet.tsx`
+- `src/components/documents/documents-client.tsx`
+- `src/components/documents/project-documents.tsx`
+- `src/components/documents/document-options.ts`
+- `scripts/qa-step-5-documents.mjs`
+- `supabase/step-5-documents-storage.sql`
+
+### Files Modified
+
+- `src/app/documents/page.tsx`
+- `src/components/projects/project-detail-client.tsx`
+- `supabase/schema.sql`
+- `supabase/rls-policies.sql`
+- `package.json`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/documents`
+- `/projects/[id]`
+
+### Database Tables Affected
+
+- `documents`
+- `projects` is read for project selectors and used by the QA script for temporary test project creation.
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- `project-documents`
+- Added setup SQL to create the bucket if missing and allow development anon CRUD on objects in this bucket.
+
+### Components Added Or Changed
+
+- Added reusable document card, form, sheet, global document client, project document section, and document options components.
+- Updated Project Detail to replace the Documents placeholder with live project documents.
+
+### Data Access Functions Added Or Changed
+
+- `getDocuments()`
+- `getDocumentsByProjectId(projectId: string)`
+- `getDocumentById(id: string)`
+- `createDocument(input)`
+- `updateDocument(id, input)`
+- `deleteDocument(id)`
+- `uploadProjectDocumentFile(file, projectId)`
+- `removeProjectDocumentFile(storagePath)`
+- `getProjectDocumentSignedUrl(storagePath)`
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- `npm run qa:step5` initially failed because the live Supabase Storage bucket was missing or inaccessible.
+- After the storage setup was available, `npm run qa:step5` passed.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779680312302`.
+- Initial blocked Step 5 QA run marker: `QA_STEP_5_1779680356862`.
+- Passing Step 5 QA run marker: `QA_STEP_5_1779681752054`.
+- Temporary QA project, document metadata row, and storage object were created, verified, updated, and deleted by the QA script.
+
+### Known Issues Or Limitations
+
+- Document upload uses the public anon Supabase client for the MVP; production should replace this with authenticated, user/team-scoped storage policies.
+- Documents can be opened through short-lived signed URLs only when the storage object exists and policy permits access.
+- AI summary and extraction fields are intentionally not populated until Step 8.
+
+### Recommended Next Task
+
+- Proceed to Step 6 Contacts CRUD + Project Contacts.
+
+## Step 6: Contacts CRUD + Project Contacts - 2026-05-24
+
+### Objective
+
+Implement live Contacts CRUD and project-contact linking so Eneridge can manage stakeholders globally and attach them to specific project roles.
+
+### Summary of Implementation
+
+- Added a contacts data access layer for global contact CRUD and project-contact linking.
+- Replaced the `/contacts` placeholder page with a live contact directory.
+- Added global contact create, edit, delete, search, and project-link display workflows.
+- Added a Project Detail Contacts section.
+- Added project workflows to:
+  - link an existing contact to a project with a relationship type
+  - create a new contact from project detail and link it immediately
+  - edit a linked contact
+  - unlink a contact from a project without deleting the contact
+- Kept email sending and deeper communication automation out of scope for this step.
+- No database schema changes were required.
+
+### Files Created
+
+- `src/lib/data/contacts.ts`
+- `src/components/contacts/contact-card.tsx`
+- `src/components/contacts/contact-form.tsx`
+- `src/components/contacts/contact-form-sheet.tsx`
+- `src/components/contacts/contact-options.ts`
+- `src/components/contacts/contacts-client.tsx`
+- `src/components/contacts/project-contacts.tsx`
+- `scripts/qa-step-6-contacts.mjs`
+
+### Files Modified
+
+- `src/app/contacts/page.tsx`
+- `src/components/projects/project-detail-client.tsx`
+- `package.json`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/contacts`
+- `/projects/[id]`
+
+### Database Tables Affected
+
+- `contacts`
+- `project_contacts`
+- `projects` is read for project link display and used by the QA script for temporary test project creation.
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- None.
+
+### Components Added Or Changed
+
+- Added reusable contact card, form, sheet, global contacts client, project contacts section, and contact relationship options.
+- Updated Project Detail to replace the Contacts placeholder with live project contacts.
+
+### Data Access Functions Added Or Changed
+
+- `getContacts()`
+- `getContactById(id)`
+- `createContact(input)`
+- `updateContact(id, input)`
+- `deleteContact(id)`
+- `getContactsByProjectId(projectId)`
+- `linkContactToProject(projectId, contactId, relationshipType)`
+- `unlinkContactFromProject(projectId, contactId)`
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779681741639`.
+- Step 5 QA passed.
+- Step 5 QA run marker: `QA_STEP_5_1779681752054`.
+- Step 6 QA passed.
+- Step 6 QA run marker: `QA_STEP_6_1779681754752`.
+- The Step 6 QA script created a temporary project, contact, project-contact link, verified contact update, verified relationship update, unlinked the contact, and deleted only records it created.
+
+### Known Issues Or Limitations
+
+- Contact relationship editing is handled by relinking/upserting through the project contact workflow; there is no dedicated inline relationship edit button yet.
+- Contact deletion from the global directory removes project-contact links by cascade.
+- Email sending and AI-assisted communication are intentionally deferred to Step 9.
+- The public anon Supabase client is still used for MVP CRUD and should be replaced with authenticated, scoped access before production.
+
+### Recommended Next Task
+
+- Proceed to Step 7 Project Financials.
+
+## Step 7: Project Financials - 2026-05-24
+
+### Objective
+
+Implement project-level financial tracking with additive schema changes, a project detail financials section, and CRUD helpers for a single active financial record per project.
+
+### Summary of Implementation
+
+- Added an additive `project_financials` table migration.
+- Added `project_financials` to the main schema and development RLS policy files.
+- Added TypeScript table stubs for `project_financials`.
+- Added a project financials data access layer.
+- Added a Project Detail Project Financials section with:
+  - estimated total cost
+  - actual total cost
+  - equipment cost
+  - installation cost
+  - utility cost
+  - soft cost
+  - rebate applicable
+  - rebate program
+  - rebate amount
+  - grant amount
+  - match share
+  - customer contribution
+  - Eneridge out of pocket
+  - reimbursement status
+  - reimbursement received
+  - retention amount
+  - notes
+- Added a simple edit workflow using an upsert-by-project helper.
+- Added currency formatting for read views.
+- No complex ROI calculations were added.
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Files Created
+
+- `supabase/step-7-project-financials.sql`
+- `src/lib/data/project-financials.ts`
+- `src/components/project-financials/project-financial-form.tsx`
+- `src/components/project-financials/project-financial-form-sheet.tsx`
+- `src/components/project-financials/project-financials.tsx`
+- `scripts/qa-step-7-financials.mjs`
+
+### Files Modified
+
+- `src/lib/supabase/types.ts`
+- `src/components/projects/project-detail-client.tsx`
+- `supabase/schema.sql`
+- `supabase/rls-policies.sql`
+- `package.json`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/projects/[id]`
+
+### Database Tables Affected
+
+- `project_financials` was added in migration and type stubs.
+- `projects` is referenced by `project_financials.project_id` and used by the QA script for temporary test project creation.
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- None.
+
+### Components Added Or Changed
+
+- Added reusable project financial form, sheet, and Project Detail financials section.
+- Updated Project Detail to render Project Financials.
+
+### Data Access Functions Added Or Changed
+
+- `getProjectFinancialByProjectId(projectId)`
+- `createProjectFinancial(input)`
+- `updateProjectFinancial(id, input)`
+- `upsertProjectFinancialByProjectId(projectId, input)`
+- `deleteProjectFinancial(id)`
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+- Network-approved `npm run qa:step7` failed because the live Supabase database does not yet have `project_financials`.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779682520598`.
+- Step 5 QA passed.
+- Step 5 QA run marker: `QA_STEP_5_1779682577131`.
+- Step 6 QA passed.
+- Step 6 QA run marker: `QA_STEP_6_1779682574771`.
+- Step 7 QA run marker: `QA_STEP_7_1779682576031`.
+- Step 7 QA failed with the expected migration message:
+  `project_financials is missing in live Supabase. Apply supabase/step-7-project-financials.sql before running Step 7 QA.`
+
+### Known Issues Or Limitations
+
+- Live Step 7 financial CRUD QA cannot pass until `supabase/step-7-project-financials.sql` is applied in Supabase SQL Editor.
+- The UI treats the latest financial row for a project as the active record; no unique database constraint was added because the requested schema did not include one.
+- Financials are manually entered; no ROI, margin, or automatic reconciliation logic is implemented yet.
+- The public anon Supabase client is still used for MVP CRUD and should be replaced with authenticated, scoped access before production.
+
+### Recommended Next Task
+
+- Apply `supabase/step-7-project-financials.sql`, rerun `npm run qa:step7`, then proceed to Step 8 AI Document Analysis.
+
+## Step 8: AI Document Analysis - 2026-05-24
+
+### Objective
+
+Implement the AI document analysis foundation for uploaded project documents, keeping the OpenAI API key server-side only and storing review-ready AI output without automatically creating action items or risks.
+
+### Summary of Implementation
+
+- Added a server-side document analysis API route at `/api/ai/analyze-document`.
+- Used the OpenAI Responses API with structured JSON output for consistent analysis payloads.
+- Added missing `OPENAI_API_KEY` handling that returns a helpful 503 response instead of crashing.
+- Added document-card Analyze workflow:
+  - user can paste optional document text or notes
+  - metadata-only analysis is supported when no text is provided
+  - analysis results render inline on the document card
+  - suggestions can be copied for review
+- Stored successful AI output in `ai_analysis_logs`.
+- Updated analyzed document rows with:
+  - `ai_summary`
+  - `key_terms`
+  - `action_items_extracted`
+  - `risks_extracted`
+  - `Needs Review` status when the document was previously `Uploaded`
+- Did not implement OCR, PDF parsing, automatic action creation, or automatic risk creation.
+- No database schema changes were required.
+
+### Files Created
+
+- `src/app/api/ai/analyze-document/route.ts`
+- `scripts/qa-step-8-ai.mjs`
+
+### Files Modified
+
+- `src/components/documents/document-card.tsx`
+- `src/components/documents/documents-client.tsx`
+- `src/components/documents/project-documents.tsx`
+- `package.json`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/api/ai/analyze-document`
+- `/documents`
+- `/projects/[id]`
+
+### Database Tables Affected
+
+- `documents`
+- `ai_analysis_logs`
+- `projects` is read for document analysis context and used by the QA script for temporary test project creation.
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- None.
+
+### Components Added Or Changed
+
+- Updated `DocumentCard` with Analyze Document, inline AI analysis display, and copyable review output.
+- Updated global and project document lists to refresh after analysis.
+
+### Data Access Functions Added Or Changed
+
+- No client-side data access functions were changed.
+- The server route uses the Supabase client directly to read projects/documents, insert AI logs, and update document AI fields.
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+- Network-approved `npm run qa:step7` failed because the live Supabase database does not yet have `project_financials`.
+- Network-approved `npm run qa:step8` passed.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779683089572`.
+- Step 5 QA passed.
+- Step 5 QA run marker: `QA_STEP_5_1779683089571`.
+- Step 6 QA passed.
+- Step 6 QA run marker: `QA_STEP_6_1779683089571`.
+- Step 7 QA remains blocked by the unapplied financials migration.
+- Step 7 QA run marker: `QA_STEP_7_1779683089572`.
+- Step 8 QA passed.
+- Step 8 QA run marker: `QA_STEP_8_1779683098415`.
+- Step 8 QA statically verified the missing-key guard and AI log route path, then created a temporary project, document, and mock AI analysis log, updated document AI fields, verified readback, and deleted only records it created.
+
+### Known Issues Or Limitations
+
+- `OPENAI_API_KEY` is not currently present in `.env.local`; live AI calls will show the missing-key message until it is added and the dev server is restarted.
+- Full PDF parsing and OCR are not implemented; users can paste document text or notes, otherwise metadata-only analysis is used.
+- Suggested action items and risks are review-only and are not automatically inserted into `action_items` or `risks`.
+- Step 7 live QA still needs `supabase/step-7-project-financials.sql` applied before it can pass.
+
+### Recommended Next Task
+
+- Add `OPENAI_API_KEY` to `.env.local` when live AI calls are desired, apply the Step 7 financials migration, then proceed to Step 9 Email Draft Generator.
+
+## Step 9: Email Draft Generator - 2026-05-24
+
+### Objective
+
+Implement a project-context email draft generator that uses Eneridge PM Copilot project data, keeps the OpenAI key server-side only, and stores generated drafts for review without sending email.
+
+### Summary of Implementation
+
+- Added a server-side email draft API route at `/api/ai/draft-email`.
+- Used the OpenAI Responses API with structured JSON output for draft subject, body, and confidence.
+- Added missing `OPENAI_API_KEY` handling that returns a helpful 503 response instead of crashing.
+- Built an AI Workspace email draft generator with:
+  - project selector
+  - recipient type selector
+  - purpose selector
+  - optional user notes
+  - optional project document selection
+  - draft preview
+  - copy-to-clipboard support
+- Included project context in the server prompt:
+  - project basic info
+  - open action items
+  - open/high risks
+  - charger groups
+  - connector details
+  - documents
+  - project contacts
+  - contacts
+- Stored successful email drafts in `ai_analysis_logs` with `agent_type = email_draft`.
+- Did not implement email sending.
+- No database schema changes were required.
+
+### Files Created
+
+- `src/app/api/ai/draft-email/route.ts`
+- `src/components/ai/email-draft-generator.tsx`
+- `scripts/qa-step-9-email.mjs`
+
+### Files Modified
+
+- `src/app/ai-workspace/page.tsx`
+- `package.json`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/ai-workspace`
+- `/api/ai/draft-email`
+
+### Database Tables Affected
+
+- `ai_analysis_logs`
+- `projects`
+- `action_items`
+- `risks`
+- `project_charger_groups`
+- `project_charger_connectors`
+- `documents`
+- `project_contacts`
+- `contacts`
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- None.
+
+### Components Added Or Changed
+
+- Added `EmailDraftGenerator`.
+- Updated AI Workspace to render the email draft generator instead of the prior placeholder.
+
+### Data Access Functions Added Or Changed
+
+- No client-side data access functions were changed.
+- The server route uses the Supabase client directly to read project context and insert AI draft logs.
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+- Network-approved `npm run qa:step7` failed because the live Supabase database does not yet have `project_financials`.
+- Network-approved `npm run qa:step8` passed.
+- `npm run qa:step9` initially failed inside the sandbox due DNS/network restriction.
+- Network-approved `npm run qa:step9` passed.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779683658527`.
+- Step 5 QA passed.
+- Step 5 QA run marker: `QA_STEP_5_1779683664241`.
+- Step 6 QA passed.
+- Step 6 QA run marker: `QA_STEP_6_1779683669324`.
+- Step 7 QA remains blocked by the unapplied financials migration.
+- Step 7 QA run marker: `QA_STEP_7_1779683672532`.
+- Step 8 QA passed.
+- Step 8 QA run marker: `QA_STEP_8_1779683676839`.
+- Step 9 QA passed.
+- Step 9 QA run marker: `QA_STEP_9_1779683700472`.
+- Step 9 QA statically verified the missing-key guard, API route, AI Workspace wiring, recipient/purpose options, and copy workflow. It then created temporary project context records, inserted a mock `email_draft` log, verified readback, and deleted only records it created.
+
+### Known Issues Or Limitations
+
+- `OPENAI_API_KEY` is not currently present in `.env.local`; live email draft generation will show the missing-key message until it is added and the dev server is restarted.
+- The draft generator produces review-only text and does not send email.
+- Generated email drafts are stored in `ai_analysis_logs`, not a dedicated email table.
+- Step 7 live QA still needs `supabase/step-7-project-financials.sql` applied before it can pass.
+
+### Recommended Next Task
+
+- Apply the Step 7 financials migration when possible, then proceed to Step 10 Dashboard Rollups and Weekly Report Generator.
+
+## Step 10: Dashboard Rollups + Weekly Report Generator - 2026-05-24
+
+### Objective
+
+Add MVP portfolio intelligence to the dashboard and provide a copyable weekly report generator without changing the database schema.
+
+### Summary of Implementation
+
+- Expanded the dashboard to load live projects, action items, risks, documents, and charger groups.
+- Added dashboard rollups for:
+  - active projects
+  - open actions
+  - overdue actions
+  - high / critical risks
+  - documents needing review
+  - total chargers
+  - total ports
+  - projects by phase
+  - projects by status
+- Updated the project register cards to show per-project rollups:
+  - open action count
+  - high / critical risk count
+  - document count
+  - charger / port summary
+- Replaced the Reports placeholder with a deterministic weekly report generator.
+- Weekly report output includes:
+  - Executive Summary
+  - Active Projects
+  - Watchlist / Risk Projects
+  - Overdue Action Items
+  - Key Risks
+  - Documents Needing Review
+  - Upcoming Milestones
+  - Suggested Follow-ups
+- Added copy-to-clipboard support for the generated markdown report.
+- No database schema changes were required.
+
+### Files Created
+
+- None.
+
+### Files Modified
+
+- `src/app/page.tsx`
+- `src/app/reports/page.tsx`
+- `src/components/projects/projects-client.tsx`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- `/`
+- `/projects`
+- `/reports`
+
+### Database Tables Affected
+
+- `projects`
+- `action_items`
+- `risks`
+- `documents`
+- `project_charger_groups`
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- None.
+
+### Components Added Or Changed
+
+- Updated dashboard cards, breakdown cards, priority project summaries, action list, and risk watchlist.
+- Updated project list cards with compact MVP rollups.
+- Replaced Reports placeholder with a live report generator.
+
+### Data Access Functions Added Or Changed
+
+- No data access functions were changed.
+- Existing data helpers are now used by the dashboard, project list, and report page.
+
+### Commands Run
+
+- `npm run lint` passed.
+- Initial `npm run build` failed on a TypeScript inference issue for charger totals.
+- Fixed the numeric helper return type.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+- Network-approved `npm run qa:step7` failed because the live Supabase database does not yet have `project_financials`.
+- Network-approved `npm run qa:step8` passed.
+- Network-approved `npm run qa:step9` passed.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779684121149`.
+- Step 5 QA passed.
+- Step 5 QA run marker: `QA_STEP_5_1779684127176`.
+- Step 6 QA passed.
+- Step 6 QA run marker: `QA_STEP_6_1779684139360`.
+- Step 7 QA remains blocked by the unapplied financials migration.
+- Step 7 QA run marker: `QA_STEP_7_1779684145850`.
+- Step 8 QA passed.
+- Step 8 QA run marker: `QA_STEP_8_1779684151762`.
+- Step 9 QA passed.
+- Step 9 QA run marker: `QA_STEP_9_1779684154857`.
+
+### Known Issues Or Limitations
+
+- Weekly reports are deterministic markdown only; no PDF export is implemented yet.
+- AI-enhanced weekly summary generation is not implemented in this step.
+- Dashboard rollups are client-side calculations for the MVP; they can later move into Supabase views or RPCs if portfolio size grows.
+- Step 7 live QA still needs `supabase/step-7-project-financials.sql` applied before it can pass.
+
+### Recommended Next Task
+
+- Proceed to Step 11 Overall QA + MVP Stabilization.
+
+## Step 11: Overall QA + MVP Stabilization - 2026-05-24
+
+### Objective
+
+Run final MVP stabilization checks across the implemented project, action, risk, charger, document, contact, financial, AI, dashboard, and reporting workflows.
+
+### Summary of Implementation
+
+- Added a full MVP QA script that creates clearly marked temporary records, verifies CRUD/readback, and deletes only records it created.
+- MVP QA covers:
+  - project create/read/update/delete
+  - action item CRUD
+  - risk CRUD
+  - charger group CRUD
+  - connector CRUD
+  - document metadata CRUD
+  - contact CRUD
+  - project-contact link cleanup
+  - project financials CRUD
+  - AI log creation/readback
+- The MVP QA script stops with a clear message when `project_financials` is missing from live Supabase.
+- Updated README with MVP QA command, known limitations, and next major roadmap.
+- No database schema changes were made in this step.
+
+### Files Created
+
+- `scripts/qa-mvp.mjs`
+
+### Files Modified
+
+- `package.json`
+- `README.md`
+- `DEV_LOG.md`
+
+### Routes Affected
+
+- No route files were changed in Step 11.
+- UI smoke checklist routes confirmed by build output:
+  - `/`
+  - `/projects`
+  - `/projects/[id]`
+  - `/actions`
+  - `/risks`
+  - `/documents`
+  - `/contacts`
+  - `/ai-workspace`
+  - `/reports`
+  - `/settings`
+
+### Database Tables Affected
+
+- `projects`
+- `action_items`
+- `risks`
+- `project_charger_groups`
+- `project_charger_connectors`
+- `documents`
+- `contacts`
+- `project_contacts`
+- `project_financials`
+- `ai_analysis_logs`
+- No existing table or column was dropped, removed, renamed, or recreated.
+
+### Storage Buckets Affected
+
+- None in the MVP QA script. Step 5 storage QA still covers the `project-documents` bucket.
+
+### Components Added Or Changed
+
+- None in Step 11.
+
+### Data Access Functions Added Or Changed
+
+- None in Step 11.
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+- Network-approved `npm run qa:step7` failed because the live Supabase database does not yet have `project_financials`.
+- Network-approved `npm run qa:step8` passed.
+- Network-approved `npm run qa:step9` passed.
+- `npm run qa:mvp` initially failed inside the sandbox due DNS/network restriction.
+- Network-approved `npm run qa:mvp` failed because the live Supabase database does not yet have `project_financials`.
+
+### QA Results
+
+- Step 4C regression QA passed.
+- Step 4C QA run marker: `QA_STEP_4C_1779684439775`.
+- Step 5 QA passed.
+- Step 5 QA run marker: `QA_STEP_5_1779684445180`.
+- Step 6 QA passed.
+- Step 6 QA run marker: `QA_STEP_6_1779684450949`.
+- Step 7 QA remains blocked by the unapplied financials migration.
+- Step 7 QA run marker: `QA_STEP_7_1779684455285`.
+- Step 8 QA passed.
+- Step 8 QA run marker: `QA_STEP_8_1779684458039`.
+- Step 9 QA passed.
+- Step 9 QA run marker: `QA_STEP_9_1779684461033`.
+- MVP QA reached live Supabase after network approval, cleaned up temporary records, and failed at the known missing financials migration.
+- MVP QA run marker: `QA_MVP_1779684476761`.
+
+### Known Issues Or Limitations
+
+- Full MVP QA cannot pass until `supabase/step-7-project-financials.sql` is applied in Supabase SQL Editor.
+- Live AI features require `OPENAI_API_KEY`; current QA scripts avoid live OpenAI calls and verify storage/logging paths with mocks.
+- Weekly report generation is text/markdown only and does not export PDF.
+- The app still uses development anon Supabase policies for MVP validation.
+
+### Recommended Next Task
+
+- Apply `supabase/step-7-project-financials.sql` in Supabase SQL Editor, then rerun `npm run qa:step7` and `npm run qa:mvp`.
+
+## MVP QA Recheck - 2026-05-25
+
+### Objective
+
+Recheck the current live Supabase state before claiming MVP completion and determine whether the remaining Step 7 migration blocker can be resolved from this local environment.
+
+### Summary
+
+- Confirmed current worktree still contains the Step 5 through Step 11 implementation artifacts.
+- Confirmed `supabase/step-7-project-financials.sql` exists and remains additive-only for the `project_financials` table, index, updated_at trigger, RLS enablement, and development anon CRUD policy.
+- Reran live financial QA and full MVP QA against Supabase.
+- Confirmed live Supabase still does not have `project_financials`.
+- Checked for local migration paths:
+  - Supabase CLI is not installed or not available on `PATH`.
+  - `psql` is installed.
+  - No `SUPABASE`, `POSTGRES`, `DATABASE`, or `PG` admin connection environment variables are available.
+  - `.env.local` only contains `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- Because only public anon credentials are available locally, the financials migration cannot be safely applied from this environment.
+- No application code was changed in this recheck.
+
+### Commands Run
+
+- Network-approved `npm run qa:step7` failed because live Supabase does not yet have `project_financials`.
+- Network-approved `npm run qa:mvp` failed because live Supabase does not yet have `project_financials`.
+- `command -v supabase` found no Supabase CLI.
+- `command -v psql` found `/opt/homebrew/bin/psql`.
+- Environment key inspection found no database admin connection variables.
+
+### QA Results
+
+- Step 7 QA run marker: `QA_STEP_7_1779729040377`.
+- MVP QA run marker: `QA_MVP_1779729046524`.
+- Both scripts reported cleanup completed for records created by the run.
+
+### Current Blocker
+
+- Apply `supabase/step-7-project-financials.sql` in Supabase SQL Editor, or provide a safe database admin connection method, then rerun:
+  - `npm run qa:step7`
+  - `npm run qa:mvp`
+
+### Recommended Next Task
+
+- Apply the Step 7 financials migration in live Supabase, then rerun final QA. After both financials and MVP QA pass, the MVP completion goal can be audited again for completion.
+
+## MVP Completion Verification - 2026-05-25
+
+### Objective
+
+Verify that the Step 7 financials migration has been applied in live Supabase and complete the final Step 5 through Step 11 MVP validation pass.
+
+### Summary
+
+- Confirmed live Supabase now accepts `project_financials` CRUD through the Step 7 QA script.
+- Reran the complete validation suite required for MVP completion.
+- Confirmed full MVP QA passes against live Supabase.
+- Updated README from blocked migration status to completed MVP QA status.
+- Temporary QA records were created only by QA scripts and cleaned up by those scripts.
+- No database tables were dropped, removed, renamed, or recreated.
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` showed the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- Network-approved `npm run qa:step4c` passed.
+- Network-approved `npm run qa:step5` passed.
+- Network-approved `npm run qa:step6` passed.
+- Network-approved `npm run qa:step7` passed.
+- Network-approved `npm run qa:step8` passed.
+- Network-approved `npm run qa:step9` passed.
+- Network-approved `npm run qa:mvp` passed.
+- Local route smoke checks against the existing Next dev server on `http://localhost:3000` returned HTTP 200 for:
+  - `/`
+  - `/projects`
+  - `/projects/00000000-0000-4000-8000-000000000000`
+  - `/actions`
+  - `/risks`
+  - `/documents`
+  - `/contacts`
+  - `/ai-workspace`
+  - `/reports`
+  - `/settings`
+
+### QA Results
+
+- Step 4C QA run marker: `QA_STEP_4C_1779731895669`.
+- Step 5 QA run marker: `QA_STEP_5_1779731903009`.
+- Step 6 QA run marker: `QA_STEP_6_1779731909761`.
+- Step 7 QA run marker: `QA_STEP_7_1779731914099`.
+- Step 8 QA run marker: `QA_STEP_8_1779731919899`.
+- Step 9 QA run marker: `QA_STEP_9_1779731924138`.
+- MVP QA run marker: `QA_MVP_1779731931082`.
+- All QA scripts reported cleanup completed for records created by the run.
+- Route smoke checks returned HTTP 200 for every MVP checklist route.
+
+### Known Issues Or Limitations
+
+- Live AI features still require `OPENAI_API_KEY`; current QA scripts avoid live OpenAI calls and verify storage/logging paths with mocks.
+- Weekly report generation is text/markdown only and does not export PDF.
+- The app still uses development anon Supabase policies for MVP validation.
+- Build still shows the existing Next.js multiple-lockfile workspace-root warning.
+
+### Recommended Next Task
+
+- Move into post-MVP hardening: authentication, production RLS policies, generated Supabase types, and AI/document extraction improvements.
+
+## Documentation Cleanup - 2026-05-25
+
+### Objective
+
+Clarify README setup language after MVP completion verification.
+
+### Summary
+
+- Updated README wording so new-environment setup steps are separate from actual post-MVP development work.
+- Clarified that Step 4C, Step 5, and Step 7 migrations are required for new Supabase environments and are not pending for the current live Supabase project.
+- Preserved the known MVP limitations around `OPENAI_API_KEY`, markdown-only reports, review-only AI suggestions, and development anon Supabase policies.
+- No application code or database schema was changed.
