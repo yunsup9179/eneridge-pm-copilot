@@ -48,6 +48,7 @@ type ProjectFormValues = {
   program: string
   phase: string
   status: string
+  project_stage: string
   priority: string
   target_construction_start: string
   target_cod: string
@@ -72,6 +73,26 @@ type ProjectFormProps = {
   onSubmit: (input: ProjectFormSubmitInput) => void
 }
 
+export const projectStatusOptions = [
+  "Active",
+  "At Risk",
+  "On Hold",
+  "Completed",
+  "Cancelled",
+] as const
+
+export const projectStageOptions = [
+  "Site Review",
+  "Design",
+  "Utility Design",
+  "Permitting",
+  "Procurement",
+  "Construction",
+  "Commissioning",
+  "Operational",
+  "Closeout",
+] as const
+
 const projectInfoFields: Array<{
   name: keyof Omit<
     ProjectFormValues,
@@ -87,6 +108,7 @@ const projectInfoFields: Array<{
   >
   label: string
   type?: string
+  options?: readonly string[]
   required?: boolean
 }> = [
   { name: "name", label: "Project name", required: true },
@@ -95,8 +117,9 @@ const projectInfoFields: Array<{
   { name: "city", label: "City" },
   { name: "utility", label: "Utility" },
   { name: "program", label: "Program" },
-  { name: "phase", label: "Phase" },
-  { name: "status", label: "Status" },
+  { name: "phase", label: "Electrical Phase" },
+  { name: "status", label: "Status", options: projectStatusOptions },
+  { name: "project_stage", label: "Project Stage", options: projectStageOptions },
   { name: "priority", label: "Priority" },
   {
     name: "target_construction_start",
@@ -117,6 +140,7 @@ function getInitialValues(project?: Project): ProjectFormValues {
     program: project?.program ?? "",
     phase: project?.phase ?? "",
     status: project?.status ?? "",
+    project_stage: project?.project_stage ?? "",
     priority: project?.priority ?? "",
     target_construction_start: project?.target_construction_start ?? "",
     target_cod: project?.target_cod ?? "",
@@ -182,6 +206,7 @@ function toProjectInput(values: ProjectFormValues): ProjectCreateInput {
     program: emptyToNull(values.program),
     phase: emptyToNull(values.phase),
     status: emptyToNull(values.status),
+    project_stage: emptyToNull(values.project_stage),
     priority: emptyToNull(values.priority),
     target_construction_start: emptyToNull(values.target_construction_start),
     target_cod: emptyToNull(values.target_cod),
@@ -304,16 +329,43 @@ export function ProjectForm({
             return (
               <div key={field.name} className="space-y-2">
                 <Label htmlFor={fieldId}>{field.label}</Label>
-                <Input
-                  id={fieldId}
-                  name={field.name}
-                  type={field.type ?? "text"}
-                  required={field.required}
-                  value={values[field.name]}
-                  onChange={(event) =>
-                    updateValue(field.name, event.target.value)
-                  }
-                />
+                {field.options ? (
+                  <Select
+                    id={fieldId}
+                    name={field.name}
+                    required={field.required}
+                    value={values[field.name]}
+                    onChange={(event) =>
+                      updateValue(field.name, event.target.value)
+                    }
+                  >
+                    <option value="">Not set</option>
+                    {values[field.name] &&
+                      !(field.options as readonly string[]).includes(
+                        values[field.name]
+                      ) && (
+                        <option value={values[field.name]}>
+                          Current: {values[field.name]}
+                        </option>
+                      )}
+                    {field.options.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Input
+                    id={fieldId}
+                    name={field.name}
+                    type={field.type ?? "text"}
+                    required={field.required}
+                    value={values[field.name]}
+                    onChange={(event) =>
+                      updateValue(field.name, event.target.value)
+                    }
+                  />
+                )}
               </div>
             )
           })}

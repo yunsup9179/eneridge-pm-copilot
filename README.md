@@ -38,7 +38,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 ## Supabase Setup Note
 
-The initial SQL schema is available at `supabase/schema.sql`. Apply it in the Supabase SQL editor or through the Supabase CLI before using live CRUD screens. For an existing live Supabase project, apply additive migration files such as `supabase/step-4c-charger-groups.sql` instead of re-running the full schema. The browser Supabase client factory is defined in `src/lib/supabase/client.ts`. Database types are stubbed in `src/lib/supabase/types.ts` and should be replaced with generated Supabase types once the schema is finalized.
+The initial SQL schema is available at `supabase/schema.sql`. Apply it in the Supabase SQL editor or through the Supabase CLI before using live CRUD screens. For an existing live Supabase project, apply additive migration files such as `supabase/step-4c-charger-groups.sql`, `supabase/step-5-documents-storage.sql`, `supabase/step-7-project-financials.sql`, and `supabase/step-post-mvp-project-stage.sql` instead of re-running the full schema. The browser Supabase client factory is defined in `src/lib/supabase/client.ts`. Database types are stubbed in `src/lib/supabase/types.ts` and should be replaced with generated Supabase types once the schema is finalized.
 
 
 ## QA Commands
@@ -75,7 +75,6 @@ The script creates clearly marked temporary QA records for a project, action ite
 - `src/lib/data/risks.ts` - Supabase risk data access layer
 - `src/lib/data/project-chargers.ts` - Supabase charger group and connector data access layer
 - `src/lib/supabase` - Supabase client and type stubs
-- `src/lib/sample-data.ts` - placeholder project data for UI scaffolding
 - `supabase/schema.sql` - initial database schema
 - `supabase/step-4c-charger-groups.sql` - additive migration for charger groups and connector details
 

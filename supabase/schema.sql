@@ -12,6 +12,7 @@ create table if not exists public.projects (
   port_count integer,
   phase text,
   status text,
+  project_stage text,
   priority text,
   target_construction_start date,
   target_cod date,
@@ -137,6 +138,30 @@ create table if not exists public.project_contacts (
   primary key (project_id, contact_id)
 );
 
+create table if not exists public.project_financials (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.projects(id) on delete cascade,
+  estimated_total_cost numeric,
+  actual_total_cost numeric,
+  equipment_cost numeric,
+  installation_cost numeric,
+  utility_cost numeric,
+  soft_cost numeric,
+  rebate_applicable boolean default false,
+  rebate_program text,
+  rebate_amount numeric,
+  grant_amount numeric,
+  match_share_amount numeric,
+  customer_contribution numeric,
+  eneridge_out_of_pocket numeric,
+  reimbursement_status text,
+  reimbursement_received numeric,
+  retention_amount numeric,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 create index if not exists action_items_project_id_idx
   on public.action_items(project_id);
 
@@ -163,6 +188,9 @@ create index if not exists project_charger_groups_project_id_idx
 
 create index if not exists project_charger_connectors_charger_group_id_idx
   on public.project_charger_connectors(charger_group_id);
+
+create index if not exists project_financials_project_id_idx
+  on public.project_financials(project_id);
 
 
 create or replace function public.set_updated_at()
@@ -215,6 +243,12 @@ create trigger set_project_charger_connectors_updated_at
   for each row
   execute function public.set_updated_at();
 
+drop trigger if exists set_project_financials_updated_at on public.project_financials;
+create trigger set_project_financials_updated_at
+  before update on public.project_financials
+  for each row
+  execute function public.set_updated_at();
+
 
 -- Development RLS policies for the browser-based MVP.
 -- These allow the public anon key to perform CRUD until authentication is added.
@@ -229,6 +263,7 @@ alter table public.ai_analysis_logs enable row level security;
 alter table public.project_contacts enable row level security;
 alter table public.project_charger_groups enable row level security;
 alter table public.project_charger_connectors enable row level security;
+alter table public.project_financials enable row level security;
 
 drop policy if exists "Allow anon CRUD on projects" on public.projects;
 create policy "Allow anon CRUD on projects"
@@ -301,3 +336,23 @@ create policy "Allow anon CRUD on project_charger_connectors"
   to anon
   using (true)
   with check (true);
+
+drop policy if exists "Allow anon CRUD on project_financials" on public.project_financials;
+create policy "Allow anon CRUD on project_financials"
+  on public.project_financials
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+insert into storage.buckets (id, name, public)
+values ('project-documents', 'project-documents', false)
+on conflict (id) do nothing;
+
+drop policy if exists "Allow anon CRUD on project-documents objects" on storage.objects;
+create policy "Allow anon CRUD on project-documents objects"
+  on storage.objects
+  for all
+  to anon
+  using (bucket_id = 'project-documents')
+  with check (bucket_id = 'project-documents');

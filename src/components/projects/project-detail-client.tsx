@@ -7,17 +7,16 @@ import type { ReactNode } from "react"
 import {
   ArrowLeft,
   Bot,
-  CalendarDays,
-  FileText,
-  MapPin,
   Pencil,
   Trash2,
-  Users,
 } from "lucide-react"
 
 import { ProjectActionItems } from "@/components/action-items/project-action-items"
+import { ProjectContacts } from "@/components/contacts/project-contacts"
+import { ProjectDocuments } from "@/components/documents/project-documents"
 import { PageHeader } from "@/components/page-header"
 import { ProjectChargers } from "@/components/project-chargers/project-chargers"
+import { ProjectFinancials } from "@/components/project-financials/project-financials"
 import { ProjectDetailSummary } from "@/components/projects/project-detail-summary"
 import { ProjectFormSheet } from "@/components/projects/project-form-sheet"
 import type { ProjectFormSubmitInput } from "@/components/projects/project-form"
@@ -38,6 +37,10 @@ import {
   updateProject,
   type Project,
 } from "@/lib/data/projects"
+import {
+  getProjectFinancialByProjectId,
+  type ProjectFinancial,
+} from "@/lib/data/project-financials"
 
 type LoadState = "loading" | "ready" | "error" | "not_found"
 
@@ -160,7 +163,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       </Button>
 
       <PageHeader
-        eyebrow={project.phase ?? "Project"}
+        eyebrow={project.project_stage ?? project.status ?? "Project"}
         title={project.name}
         description={project.summary ?? "No project summary has been added yet."}
         actions={
@@ -207,55 +210,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
 
       <ProjectDetailSummary project={project} />
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle>Project overview</CardTitle>
-                <CardDescription>
-                  Core project data from the `projects` table.
-                </CardDescription>
-              </div>
-              <StatusBadge status={project.status} />
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <ProfileField label="Customer" value={project.customer} />
-            <ProfileField label="Location" value={project.location} />
-            <ProfileField label="City" value={project.city} />
-            <ProfileField label="Utility" value={project.utility} />
-            <ProfileField label="Program" value={project.program} />
-            <ProfileField label="Priority" value={project.priority} />
-            <ProfileField label="Phase" value={project.phase} />
-            <ProfileField label="Internal owner" value={project.internal_owner} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Key dates</CardTitle>
-            <CardDescription>Construction and COD targets.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <KeyDate
-              icon={<MapPin className="size-4" />}
-              label="Project location"
-              value={project.location}
-            />
-            <KeyDate
-              icon={<CalendarDays className="size-4" />}
-              label="Target construction start"
-              value={project.target_construction_start}
-            />
-            <KeyDate
-              icon={<CalendarDays className="size-4" />}
-              label="Target COD"
-              value={project.target_cod}
-            />
-          </CardContent>
-        </Card>
-      </section>
+      <ProjectOverviewCard project={project} />
 
       <ProjectChargers project={project} />
 
@@ -263,17 +218,13 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
 
       <ProjectRisks project={project} />
 
+      <ProjectDocuments project={project} />
+
+      <ProjectContacts project={project} />
+
+      <ProjectFinancials project={project} />
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <PlaceholderCard
-          title="Documents"
-          description="Uploaded files and AI summaries will appear here."
-          icon={<FileText className="size-4" />}
-        />
-        <PlaceholderCard
-          title="Contacts"
-          description="Project stakeholders will appear here."
-          icon={<Users className="size-4" />}
-        />
         <PlaceholderCard
           title="AI Notes"
           description="Approved AI analysis logs will appear here."
@@ -343,6 +294,91 @@ function ProjectDetailErrorState({
   )
 }
 
+function ProjectOverviewCard({ project }: { project: Project }) {
+  const [financial, setFinancial] = useState<ProjectFinancial | null>(null)
+  const [financialError, setFinancialError] = useState<string | null>(null)
+
+  const loadFinancial = useCallback(async () => {
+    setFinancialError(null)
+
+    try {
+      const data = await getProjectFinancialByProjectId(project.id)
+      setFinancial(data)
+    } catch (error) {
+      setFinancialError(getErrorMessage(error))
+    }
+  }, [project.id])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void loadFinancial()
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
+  }, [loadFinancial])
+
+  const incentiveProgram = financial?.rebate_program ?? project.program
+  const reservedIncentive = getReservedIncentive(financial)
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Project overview</CardTitle>
+            <CardDescription>
+              Core project details, incentive context, budget, and milestone
+              dates.
+            </CardDescription>
+          </div>
+          <StatusBadge status={project.status} />
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ProfileField label="Customer" value={project.customer} />
+        <ProfileField label="City" value={project.city} />
+        <ProfileField label="Location" value={project.location} />
+        <ProfileField label="Utility" value={project.utility} />
+        <ProfileField
+          label="Program / Incentive Program"
+          value={incentiveProgram}
+        />
+        <ProfileField label="Status" value={project.status} />
+        <ProfileField label="Project Stage" value={project.project_stage} />
+        <ProfileField label="Electrical Phase" value={project.phase} />
+        <ProfileField
+          label="Target Construction Start"
+          value={project.target_construction_start}
+        />
+        <ProfileField label="Target COD" value={project.target_cod} />
+        <ProfileField label="Internal Owner" value={project.internal_owner} />
+        <ProfileField
+          label="Estimated CAPEX / Project Budget"
+          value={
+            financialError
+              ? "Financials unavailable"
+              : formatCurrency(financial?.estimated_total_cost ?? null)
+          }
+        />
+        <ProfileField
+          label="Reserved Incentive Amount"
+          value={
+            financialError
+              ? "Financials unavailable"
+              : formatCurrency(reservedIncentive)
+          }
+        />
+        <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-2 lg:col-span-3">
+          <p className="text-xs text-muted-foreground">Summary</p>
+          <p className="mt-1 text-sm font-medium leading-6">
+            {project.summary ?? "Not set"}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function ProfileField({
   label,
   value,
@@ -354,28 +390,6 @@ function ProfileField({
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-medium">{value ?? "Not set"}</p>
-    </div>
-  )
-}
-
-function KeyDate({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode
-  label: string
-  value: string | null
-}) {
-  return (
-    <div className="flex gap-3">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-        {icon}
-      </span>
-      <div>
-        <p className="text-sm font-medium">{value ?? "Not set"}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
     </div>
   )
 }
@@ -406,9 +420,41 @@ function PlaceholderCard({
 }
 
 function StatusBadge({ status }: { status: string | null }) {
-  const isAlert = status === "At risk" || status === "Blocked"
+  const isAlert =
+    status === "At Risk" || status === "At risk" || status === "Blocked"
 
-  return <Badge variant={isAlert ? "destructive" : "outline"}>{status ?? "Draft"}</Badge>
+  return (
+    <Badge variant={isAlert ? "destructive" : "outline"}>
+      {status ?? "Draft"}
+    </Badge>
+  )
+}
+
+function formatCurrency(value: number | null) {
+  if (value === null) {
+    return "Not set"
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function getReservedIncentive(financial: ProjectFinancial | null) {
+  if (!financial) {
+    return null
+  }
+
+  const rebateAmount = financial.rebate_amount
+  const grantAmount = financial.grant_amount
+
+  if (rebateAmount === null && grantAmount === null) {
+    return null
+  }
+
+  return (rebateAmount ?? 0) + (grantAmount ?? 0)
 }
 
 function getErrorMessage(error: unknown) {

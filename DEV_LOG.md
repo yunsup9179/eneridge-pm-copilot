@@ -621,3 +621,202 @@ Improve the Project Detail page readability and information hierarchy before mov
 ### Recommended Next Task
 
 - Start Step 5 Documents CRUD and file upload support.
+
+## Post-MVP Cleanup Pass 1 - 2026-05-25
+
+### Objective
+
+Remove only the lowest-risk unreferenced tracked cleanup candidates after final reference checks, without changing schema, Supabase data, dependencies, auth/RLS behavior, or active application workflows.
+
+### Summary
+
+- Removed obsolete sample project scaffolding now that the MVP uses live Supabase data.
+- Removed unreferenced default Next.js starter SVG assets from `public/`.
+- Removed the README reference to the deleted sample data file.
+- Updated the cleanup audit to mark the completed pass and keep the remaining cleanup recommendations focused.
+
+### Files Removed
+
+- `src/lib/sample-data.ts`
+- `public/file.svg`
+- `public/globe.svg`
+- `public/next.svg`
+- `public/vercel.svg`
+- `public/window.svg`
+
+### Files Modified
+
+- `README.md`
+- `CLEANUP_AUDIT.md`
+- `DEV_LOG.md`
+
+### Checks
+
+- Ran `rg "sample-data|sampleData|sampleProjects|ucsc-silicon-valley-campus"` before and after deletion.
+- Ran `rg "file.svg|globe.svg|next.svg|vercel.svg|window.svg"` before and after deletion.
+- Final results only found expected cleanup-documentation references; no active app code, README usage, or asset usage remained.
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run qa:step5` passed.
+- `npm run qa:step7` passed.
+- `npm run qa:mvp` passed.
+
+### QA Results
+
+- MVP QA marker: `QA_MVP_1779746525405`.
+- Step 5 QA marker: `QA_STEP_5_1779746826388`.
+- Step 7 QA marker: `QA_STEP_7_1779746846348`.
+- `qa:step5` verified document metadata CRUD plus Supabase Storage upload/remove against the `project-documents` bucket.
+- `qa:step7` verified project financial CRUD against the live `project_financials` table.
+- `qa:mvp` created, verified, updated, and deleted only temporary QA records created by that run.
+- Result: `QA MVP RESULT: PASS`.
+
+### Intentionally Kept
+
+- `eneridge-dashboard-desktop.png`
+- `src/app/settings/page.tsx`
+- `src/components/placeholder-page.tsx`
+- `AGENTS.md`
+- `CLAUDE.md`
+- Supabase SQL files, including Step 4C, Step 5, and Step 7 migrations.
+- QA scripts, including Step 4C through MVP scripts.
+- `package-lock.json`
+- `src/components/ui/*`
+- `.env.local`
+
+### Known Issues Or Limitations
+
+- Build still shows the existing Next.js multiple-lockfile workspace-root warning.
+- Cleanup was intentionally narrow and did not address stale or nonfunctional AppShell header UI.
+- No Supabase schema or data was changed in this pass.
+
+### Recommended Next Cleanup Step
+
+- Review `src/components/app-shell.tsx` for stale hardcoded workspace pulse text and nonfunctional header controls, then either wire them to real MVP data/actions or simplify the shell UI.
+
+## Post-MVP Cleanup Pass 2 - AppShell UI Cleanup - 2026-05-25
+
+### Objective
+
+Clean up stale or nonfunctional AppShell header/sidebar UI while keeping navigation, responsive layout, routes, data logic, schema, auth/RLS, and dependencies unchanged.
+
+### What Changed
+
+- Removed stale sidebar workspace pulse cards with hardcoded counts and the `MVP sample set` label.
+- Replaced the sidebar pulse area with a simple static workspace status card that does not imply live counts.
+- Removed the nonfunctional header search input.
+- Removed the nonfunctional notification icon button.
+- Removed the nonfunctional account dropdown menu.
+- Replaced the header search area with simple static workspace context text.
+- Kept the `New project` route button as a real navigation link to `/projects`.
+
+### Files Modified
+
+- `src/components/app-shell.tsx`
+- `CLEANUP_AUDIT.md`
+- `DEV_LOG.md`
+
+### What Was Intentionally Kept
+
+- Primary sidebar navigation and active-route styling.
+- Mobile navigation sheet behavior.
+- Brand mark and `/` home link.
+- `New project` navigation link to `/projects`.
+- Existing routes, Supabase/data logic, database schema, auth/RLS behavior, dependencies, and QA scripts.
+
+### Commands Run
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run qa:mvp` passed.
+
+### QA Results
+
+- MVP QA marker: `QA_MVP_1779751495024`.
+- `qa:mvp` created, verified, updated, and deleted only temporary QA records created by that run.
+- Result: `QA MVP RESULT: PASS`.
+
+### Known Issues Or Limitations
+
+- The shell now avoids nonfunctional header controls, but does not add live header search, notifications, or account/auth behavior.
+
+### Recommended Next Cleanup Step
+
+- Review duplicated QA helper logic across `scripts/qa-*.mjs` and consider a small shared `scripts/qa-utils.mjs` once the QA flows settle.
+
+## Post-MVP Project Page UX Refinement - 2026-05-25
+
+### Objective
+
+Improve the Projects page cards and Project Detail information hierarchy for real project-management scanning, while preserving CRUD behavior and existing data.
+
+### Summary of Changes
+
+- Added `project_stage` as a new additive project field so workflow progress can be separated from status and electrical phase.
+- Updated the project create/edit form:
+  - `Status` is now a select with `Active`, `At Risk`, `On Hold`, `Completed`, and `Cancelled`.
+  - `Project Stage` is now a select with site review through closeout workflow stages.
+  - Existing `phase` is labeled as `Electrical Phase`.
+- Updated Projects page cards:
+  - Removed Utility and Electrical Phase from the card summary.
+  - Hid Priority unless it has a meaningful value.
+  - Added Project Stage, budget, incentive program, reserved incentive, charger/port totals, open actions, high/critical risks, documents, target COD, and owner.
+  - Uses `project_financials.estimated_total_cost`, `rebate_program`, `rebate_amount`, and `grant_amount` where available.
+- Updated Project Detail snapshot:
+  - Replaced Phase with Project Stage.
+  - Added Connector / Port Types from charger connector rows.
+  - Kept status, total chargers, total ports, open action items, open/high risks, and target COD.
+- Updated Project Overview:
+  - Includes customer, city, location, utility, program/incentive program, status, project stage, electrical phase, target dates, owner, budget, reserved incentive, and summary.
+  - Pulls budget and incentive values from the latest project financial row for the project.
+- Added a defensive create/update retry that omits `project_stage` if the live Supabase schema has not received the new column yet.
+
+### Files Modified
+
+- `src/components/projects/projects-client.tsx`
+- `src/components/projects/project-detail-summary.tsx`
+- `src/components/projects/project-detail-client.tsx`
+- `src/components/projects/project-form.tsx`
+- `src/lib/data/projects.ts`
+- `src/lib/data/project-financials.ts`
+- `src/lib/supabase/types.ts`
+- `supabase/schema.sql`
+- `README.md`
+- `DEV_LOG.md`
+
+### Files Created
+
+- `supabase/step-post-mvp-project-stage.sql`
+
+### Schema Changes
+
+- Added `projects.project_stage text` to `supabase/schema.sql`.
+- Added additive live migration:
+  - `alter table public.projects add column if not exists project_stage text;`
+
+### Migration Required
+
+- Apply `supabase/step-post-mvp-project-stage.sql` in Supabase SQL Editor for Project Stage values to persist in the live database.
+- Until the migration is applied, the app keeps project create/update usable by retrying without `project_stage`, but stage values will not be saved.
+
+### Validation Results
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm run build` still shows the existing Next.js multiple-lockfile workspace-root warning, but the production build completed successfully.
+- `npm run qa:mvp` passed.
+- MVP QA marker: `QA_MVP_1779765762212`.
+- `qa:mvp` created, verified, updated, and deleted only temporary QA records created by that run.
+
+### Known Limitations
+
+- `qa:mvp` does not yet verify `project_stage` persistence because the new live migration may not have been applied yet.
+- Projects page cards use the latest available project financial row by created date.
+- Existing historical status values, such as lowercase/custom statuses, are preserved and shown as current values in the edit form until changed.
+
+### Recommended Next Step
+
+- Apply `supabase/step-post-mvp-project-stage.sql`, then optionally add a tiny QA check for `project_stage` create/update persistence.

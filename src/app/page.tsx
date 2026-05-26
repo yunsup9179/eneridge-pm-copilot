@@ -9,7 +9,9 @@ import {
   ClipboardList,
   FileText,
   FolderKanban,
+  PlugZap,
   Plus,
+  Zap,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
@@ -29,6 +31,16 @@ import {
   type ActionItemWithProject,
 } from "@/lib/data/action-items"
 import {
+  getDocuments,
+  isMissingDocumentConfigError,
+  type ProjectDocumentWithProject,
+} from "@/lib/data/documents"
+import {
+  getProjectChargerGroups,
+  isMissingProjectChargerConfigError,
+  type ProjectChargerGroup,
+} from "@/lib/data/project-chargers"
+import {
   getProjects,
   isMissingSupabaseConfigError,
   type Project,
@@ -38,7 +50,6 @@ import {
   isMissingRiskConfigError,
   type RiskWithProject,
 } from "@/lib/data/risks"
-import { sampleDocuments } from "@/lib/sample-data"
 
 type LoadState = "loading" | "ready" | "error"
 
@@ -46,6 +57,8 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [actionItems, setActionItems] = useState<ActionItemWithProject[]>([])
   const [risks, setRisks] = useState<RiskWithProject[]>([])
+  const [documents, setDocuments] = useState<ProjectDocumentWithProject[]>([])
+  const [chargerGroups, setChargerGroups] = useState<ProjectChargerGroup[]>([])
   const [loadState, setLoadState] = useState<LoadState>("loading")
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -58,15 +71,20 @@ export default function DashboardPage() {
     setLoadError(null)
 
     try {
-      const [projectData, actionData, riskData] = await Promise.all([
-        getProjects(),
-        getActionItems(),
-        getRisks(),
-      ])
+      const [projectData, actionData, riskData, documentData, chargerData] =
+        await Promise.all([
+          getProjects(),
+          getActionItems(),
+          getRisks(),
+          getDocuments(),
+          getProjectChargerGroups(),
+        ])
 
       setProjects(projectData)
       setActionItems(actionData)
       setRisks(riskData)
+      setDocuments(documentData)
+      setChargerGroups(chargerData)
       setLoadState("ready")
     } catch (error) {
       setLoadError(getErrorMessage(error))
@@ -78,19 +96,60 @@ export default function DashboardPage() {
     () => actionItems.filter((item) => item.status !== "Completed"),
     [actionItems]
   )
-  const highRisks = useMemo(
-    () => risks.filter((risk) => risk.severity === "High"),
+  const overdueActions = useMemo(
+    () => openActions.filter((item) => isPastDue(item.due_date)),
+    [openActions]
+  )
+  const highCriticalRisks = useMemo(
+    () =>
+      risks.filter(
+        (risk) =>
+          risk.status !== "Closed" &&
+          (risk.severity === "High" || risk.severity === "Critical")
+      ),
     [risks]
   )
-  const priorityProjects = projects.slice(0, 3)
-  const upcomingActions = openActions.slice(0, 4)
-  const watchlistRisks = risks.slice(0, 3)
+  const documentsNeedingReview = useMemo(
+    () => documents.filter((document) => document.status === "Needs Review"),
+    [documents]
+  )
+  const activeProjects = useMemo(
+    () => projects.filter((project) => isActiveProject(project)),
+    [projects]
+  )
+  const totalChargers = useMemo(
+    () => sumNumbers(chargerGroups.map((group) => group.charger_count)),
+    [chargerGroups]
+  )
+  const totalPorts = useMemo(
+    () => sumNumbers(chargerGroups.map((group) => group.port_count)),
+    [chargerGroups]
+  )
+  const projectsByPhase = useMemo(
+    () => countBy(projects.map((project) => project.phase ?? "Not set")),
+    [projects]
+  )
+  const projectsByStatus = useMemo(
+    () => countBy(projects.map((project) => project.status ?? "Draft")),
+    [projects]
+  )
+  const projectStats = useMemo(
+    () => buildProjectStats(projects, openActions, highCriticalRisks),
+    [projects, openActions, highCriticalRisks]
+  )
+
+  const priorityProjects = activeProjects.slice(0, 3)
+  const upcomingActions = openActions
+    .slice()
+    .sort(compareNullableDates((item) => item.due_date))
+    .slice(0, 4)
+  const watchlistRisks = highCriticalRisks.slice(0, 3)
 
   const metrics = [
     {
       label: "Active projects",
-      value: projects.length.toString(),
-      detail: "Live Supabase project register",
+      value: activeProjects.length.toString(),
+      detail: "Not completed or archived",
       icon: FolderKanban,
       color: "text-teal-700 bg-teal-50",
       href: "/projects",
@@ -98,26 +157,50 @@ export default function DashboardPage() {
     {
       label: "Open actions",
       value: openActions.length.toString(),
-      detail: "All actions linked to projects",
+      detail: "Incomplete follow-ups",
       icon: ClipboardList,
       color: "text-amber-700 bg-amber-50",
       href: "/actions",
     },
     {
-      label: "High risks",
-      value: highRisks.length.toString(),
-      detail: "Utility, permitting, and site access",
+      label: "Overdue actions",
+      value: overdueActions.length.toString(),
+      detail: "Past due and still open",
+      icon: CalendarDays,
+      color: "text-orange-700 bg-orange-50",
+      href: "/actions",
+    },
+    {
+      label: "High / critical risks",
+      value: highCriticalRisks.length.toString(),
+      detail: "Open risks needing attention",
       icon: AlertTriangle,
       color: "text-rose-700 bg-rose-50",
       href: "/risks",
     },
     {
-      label: "Documents",
-      value: sampleDocuments.length.toString(),
-      detail: "Ready for later AI extraction",
+      label: "Docs needing review",
+      value: documentsNeedingReview.length.toString(),
+      detail: "Document status is Needs Review",
       icon: FileText,
       color: "text-cyan-700 bg-cyan-50",
       href: "/documents",
+    },
+    {
+      label: "Total chargers",
+      value: totalChargers.toString(),
+      detail: "From project charger groups",
+      icon: Zap,
+      color: "text-emerald-700 bg-emerald-50",
+      href: "/projects",
+    },
+    {
+      label: "Total ports",
+      value: totalPorts.toString(),
+      detail: "From project charger groups",
+      icon: PlugZap,
+      color: "text-indigo-700 bg-indigo-50",
+      href: "/projects",
     },
   ]
 
@@ -126,7 +209,7 @@ export default function DashboardPage() {
       <PageHeader
         eyebrow="Eneridge PM Copilot"
         title="Project command center"
-        description="Project-centered workspace for EV charging infrastructure delivery, with every action, risk, document, contact, and future AI analysis tied back to a project."
+        description="Project-centered workspace for EV charging infrastructure delivery, with actions, risks, documents, contacts, chargers, and AI review tied back to projects."
         actions={
           <>
             <Button variant="outline" asChild>
@@ -194,6 +277,11 @@ export default function DashboardPage() {
         })}
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-2">
+        <BreakdownCard title="Projects by phase" items={projectsByPhase} />
+        <BreakdownCard title="Projects by status" items={projectsByStatus} />
+      </section>
+
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.85fr)]">
         <Card>
           <CardHeader>
@@ -201,7 +289,7 @@ export default function DashboardPage() {
               <div>
                 <CardTitle>Priority projects</CardTitle>
                 <CardDescription>
-                  Live projects from the Supabase register.
+                  Active projects with current action and risk counts.
                 </CardDescription>
               </div>
               <Button variant="outline" size="sm" asChild>
@@ -213,14 +301,18 @@ export default function DashboardPage() {
             {loadState === "loading" && <DashboardListLoading />}
             {loadState === "ready" && priorityProjects.length === 0 && (
               <EmptyDashboardMessage
-                title="No projects yet"
+                title="No active projects yet"
                 description="Create a project to populate the dashboard."
                 href="/projects"
                 action="Go to projects"
               />
             )}
             {priorityProjects.map((project) => (
-              <ProjectSummaryCard key={project.id} project={project} />
+              <ProjectSummaryCard
+                key={project.id}
+                project={project}
+                stats={projectStats.get(project.id)}
+              />
             ))}
           </CardContent>
         </Card>
@@ -258,7 +350,10 @@ export default function DashboardPage() {
                       {action.project?.name ?? "Unassigned project"}
                     </p>
                   </div>
-                  <Badge variant="secondary" className="h-fit shrink-0">
+                  <Badge
+                    variant={isPastDue(action.due_date) ? "destructive" : "secondary"}
+                    className="h-fit shrink-0"
+                  >
                     {formatNullable(action.due_date)}
                   </Badge>
                 </Link>
@@ -270,15 +365,15 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>Risk watchlist</CardTitle>
               <CardDescription>
-                Active project risks ready for review.
+                Open high and critical risks ready for review.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadState === "loading" && <DashboardListLoading />}
               {loadState === "ready" && watchlistRisks.length === 0 && (
                 <EmptyDashboardMessage
-                  title="No risks logged"
-                  description="Risks will appear here when added."
+                  title="No high risks logged"
+                  description="High and critical risks will appear here."
                   href="/risks"
                   action="View risks"
                 />
@@ -291,11 +386,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <Badge variant="outline">{risk.category ?? "Risk"}</Badge>
-                    <Badge
-                      variant={
-                        risk.severity === "High" ? "destructive" : "secondary"
-                      }
-                    >
+                    <Badge variant="destructive">
                       {risk.severity ?? "Unscored"}
                     </Badge>
                   </div>
@@ -313,7 +404,13 @@ export default function DashboardPage() {
   )
 }
 
-function ProjectSummaryCard({ project }: { project: Project }) {
+function ProjectSummaryCard({
+  project,
+  stats,
+}: {
+  project: Project
+  stats?: { openActions: number; highRisks: number }
+}) {
   return (
     <Link
       href={`/projects/${project.id}`}
@@ -343,6 +440,14 @@ function ProjectSummaryCard({ project }: { project: Project }) {
           </span>
         </div>
       </div>
+      <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+        <span className="rounded-md bg-muted/50 px-2 py-1">
+          Open actions: {stats?.openActions ?? 0}
+        </span>
+        <span className="rounded-md bg-muted/50 px-2 py-1">
+          High risks: {stats?.highRisks ?? 0}
+        </span>
+      </div>
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Progress</span>
@@ -351,6 +456,38 @@ function ProjectSummaryCard({ project }: { project: Project }) {
         <Progress value={getProjectProgress(project)} />
       </div>
     </Link>
+  )
+}
+
+function BreakdownCard({
+  title,
+  items,
+}: {
+  title: string
+  items: { label: string; count: number }[]
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>Current portfolio distribution.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No projects yet.</p>
+        ) : (
+          items.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2"
+            >
+              <span className="truncate text-sm font-medium">{item.label}</span>
+              <Badge variant="secondary">{item.count}</Badge>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -389,6 +526,95 @@ function EmptyDashboardMessage({
   )
 }
 
+function buildProjectStats(
+  projects: Project[],
+  openActions: ActionItemWithProject[],
+  highCriticalRisks: RiskWithProject[]
+) {
+  const stats = new Map<string, { openActions: number; highRisks: number }>()
+
+  for (const project of projects) {
+    stats.set(project.id, { openActions: 0, highRisks: 0 })
+  }
+
+  for (const action of openActions) {
+    if (!action.project_id) {
+      continue
+    }
+
+    const current = stats.get(action.project_id)
+    if (current) {
+      current.openActions += 1
+    }
+  }
+
+  for (const risk of highCriticalRisks) {
+    if (!risk.project_id) {
+      continue
+    }
+
+    const current = stats.get(risk.project_id)
+    if (current) {
+      current.highRisks += 1
+    }
+  }
+
+  return stats
+}
+
+function countBy(values: string[]) {
+  const counts = new Map<string, number>()
+
+  for (const value of values) {
+    counts.set(value, (counts.get(value) ?? 0) + 1)
+  }
+
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+}
+
+function sumNumbers(values: (number | null)[]): number {
+  return values.reduce<number>((total, value) => total + (value ?? 0), 0)
+}
+
+function isActiveProject(project: Project) {
+  const status = project.status?.toLowerCase()
+  return status !== "completed" && status !== "archived" && status !== "cancelled"
+}
+
+function isPastDue(value: string | null) {
+  if (!value) {
+    return false
+  }
+
+  const dueDate = new Date(`${value}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return dueDate < today
+}
+
+function compareNullableDates<T>(getValue: (item: T) => string | null) {
+  return (a: T, b: T) => {
+    const aValue = getValue(a)
+    const bValue = getValue(b)
+
+    if (!aValue && !bValue) {
+      return 0
+    }
+
+    if (!aValue) {
+      return 1
+    }
+
+    if (!bValue) {
+      return -1
+    }
+
+    return aValue.localeCompare(bValue)
+  }
+}
+
 function getProjectProgress(project: Project) {
   if (project.status === "Completed") {
     return 100
@@ -421,7 +647,9 @@ function getErrorMessage(error: unknown) {
   if (
     isMissingSupabaseConfigError(error) ||
     isMissingActionItemConfigError(error) ||
-    isMissingRiskConfigError(error)
+    isMissingRiskConfigError(error) ||
+    isMissingDocumentConfigError(error) ||
+    isMissingProjectChargerConfigError(error)
   ) {
     return error.message
   }

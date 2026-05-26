@@ -22,6 +22,7 @@ export type Database = {
           port_count: number | null
           phase: string | null
           status: string | null
+          project_stage: string | null
           priority: string | null
           target_construction_start: string | null
           target_cod: string | null
@@ -42,6 +43,7 @@ export type Database = {
           port_count?: number | null
           phase?: string | null
           status?: string | null
+          project_stage?: string | null
           priority?: string | null
           target_construction_start?: string | null
           target_cod?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           port_count?: number | null
           phase?: string | null
           status?: string | null
+          project_stage?: string | null
           priority?: string | null
           target_construction_start?: string | null
           target_cod?: string | null
@@ -475,6 +478,85 @@ export type Database = {
             foreignKeyName: "project_contacts_contact_id_fkey"
             columns: ["contact_id"]
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_financials: {
+        Row: {
+          id: string
+          project_id: string | null
+          estimated_total_cost: number | null
+          actual_total_cost: number | null
+          equipment_cost: number | null
+          installation_cost: number | null
+          utility_cost: number | null
+          soft_cost: number | null
+          rebate_applicable: boolean | null
+          rebate_program: string | null
+          rebate_amount: number | null
+          grant_amount: number | null
+          match_share_amount: number | null
+          customer_contribution: number | null
+          eneridge_out_of_pocket: number | null
+          reimbursement_status: string | null
+          reimbursement_received: number | null
+          retention_amount: number | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          estimated_total_cost?: number | null
+          actual_total_cost?: number | null
+          equipment_cost?: number | null
+          installation_cost?: number | null
+          utility_cost?: number | null
+          soft_cost?: number | null
+          rebate_applicable?: boolean | null
+          rebate_program?: string | null
+          rebate_amount?: number | null
+          grant_amount?: number | null
+          match_share_amount?: number | null
+          customer_contribution?: number | null
+          eneridge_out_of_pocket?: number | null
+          reimbursement_status?: string | null
+          reimbursement_received?: number | null
+          retention_amount?: number | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          estimated_total_cost?: number | null
+          actual_total_cost?: number | null
+          equipment_cost?: number | null
+          installation_cost?: number | null
+          utility_cost?: number | null
+          soft_cost?: number | null
+          rebate_applicable?: boolean | null
+          rebate_program?: string | null
+          rebate_amount?: number | null
+          grant_amount?: number | null
+          match_share_amount?: number | null
+          customer_contribution?: number | null
+          eneridge_out_of_pocket?: number | null
+          reimbursement_status?: string | null
+          reimbursement_received?: number | null
+          retention_amount?: number | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_financials_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

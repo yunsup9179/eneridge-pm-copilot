@@ -11,6 +11,7 @@ alter table public.ai_analysis_logs enable row level security;
 alter table public.project_contacts enable row level security;
 alter table public.project_charger_groups enable row level security;
 alter table public.project_charger_connectors enable row level security;
+alter table public.project_financials enable row level security;
 
 drop policy if exists "Allow anon CRUD on projects" on public.projects;
 create policy "Allow anon CRUD on projects"
@@ -83,3 +84,19 @@ create policy "Allow anon CRUD on project_charger_connectors"
   to anon
   using (true)
   with check (true);
+
+drop policy if exists "Allow anon CRUD on project_financials" on public.project_financials;
+create policy "Allow anon CRUD on project_financials"
+  on public.project_financials
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow anon CRUD on project-documents objects" on storage.objects;
+create policy "Allow anon CRUD on project-documents objects"
+  on storage.objects
+  for all
+  to anon
+  using (bucket_id = 'project-documents')
+  with check (bucket_id = 'project-documents');

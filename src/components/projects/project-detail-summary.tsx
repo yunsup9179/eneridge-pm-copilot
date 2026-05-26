@@ -27,6 +27,7 @@ type LoadState = "loading" | "ready" | "error"
 type SummaryCounts = {
   totalChargers: number
   totalPorts: number
+  connectorTypes: string[]
   openActions: number
   openRisks: number
   highRisks: number
@@ -38,6 +39,7 @@ export function ProjectDetailSummary({ project }: { project: Project }) {
   const [counts, setCounts] = useState<SummaryCounts>({
     totalChargers: 0,
     totalPorts: 0,
+    connectorTypes: [],
     openActions: 0,
     openRisks: 0,
     highRisks: 0,
@@ -55,6 +57,15 @@ export function ProjectDetailSummary({ project }: { project: Project }) {
       ])
 
       const openRisks = risks.filter((risk) => risk.status !== "Closed")
+      const connectorTypes = Array.from(
+        new Set(
+          chargerGroups.flatMap((group) =>
+            group.connectors
+              .map((connector) => connector.connector_type)
+              .filter((type): type is string => Boolean(type))
+          )
+        )
+      )
 
       setCounts({
         totalChargers: chargerGroups.reduce(
@@ -65,11 +76,14 @@ export function ProjectDetailSummary({ project }: { project: Project }) {
           (sum, group) => sum + (group.port_count ?? 0),
           0
         ),
+        connectorTypes,
         openActions: actionItems.filter(
           (item) => item.status !== "Completed"
         ).length,
         openRisks: openRisks.length,
-        highRisks: openRisks.filter((risk) => risk.severity === "High").length,
+        highRisks: openRisks.filter(
+          (risk) => risk.severity === "High" || risk.severity === "Critical"
+        ).length,
       })
       setLoadState("ready")
     } catch (error) {
@@ -104,9 +118,12 @@ export function ProjectDetailSummary({ project }: { project: Project }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryTile label="Status" value={project.status ?? "Draft"} />
-          <SummaryTile label="Phase" value={project.phase ?? "Not set"} />
+          <SummaryTile
+            label="Project Stage"
+            value={project.project_stage ?? "Not set"}
+          />
           <SummaryTile
             label="Total Chargers"
             value={isLoading ? "..." : counts.totalChargers.toString()}
@@ -115,6 +132,17 @@ export function ProjectDetailSummary({ project }: { project: Project }) {
           <SummaryTile
             label="Total Ports"
             value={isLoading ? "..." : counts.totalPorts.toString()}
+            icon={<BatteryCharging className="size-4" />}
+          />
+          <SummaryTile
+            label="Connector / Port Types"
+            value={
+              isLoading
+                ? "..."
+                : counts.connectorTypes.length > 0
+                  ? counts.connectorTypes.join(", ")
+                  : "Not set"
+            }
             icon={<BatteryCharging className="size-4" />}
           />
           <SummaryTile

@@ -3,27 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, type ReactNode } from "react"
-import {
-  Bell,
-  ChevronDown,
-  Menu,
-  Plus,
-  Search,
-  Zap,
-} from "lucide-react"
+import { Menu, Plus, Zap } from "lucide-react"
 
 import { navigationItems } from "@/config/navigation"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
@@ -37,27 +21,6 @@ import {
 type AppShellProps = {
   children: ReactNode
 }
-
-const workspacePulse = [
-  {
-    label: "Active projects",
-    value: "3",
-    note: "MVP sample set",
-    className: "bg-emerald-500",
-  },
-  {
-    label: "Open actions",
-    value: "7",
-    note: "Project linked",
-    className: "bg-amber-500",
-  },
-  {
-    label: "AI readiness",
-    value: "Schema",
-    note: "Logs prepared",
-    className: "bg-cyan-600",
-  },
-]
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
@@ -78,29 +41,13 @@ export function AppShell({ children }: AppShellProps) {
             <p className="px-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
               Workspace
             </p>
-            <div className="space-y-2">
-              {workspacePulse.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-lg border border-sidebar-border bg-background/80 p-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      {item.label}
-                    </span>
-                    <span
-                      className={cn("size-2 rounded-full", item.className)}
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div className="mt-2 flex items-end justify-between gap-3">
-                    <span className="text-lg font-semibold">{item.value}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.note}
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <div className="rounded-lg border border-sidebar-border bg-background/80 p-3">
+              <p className="text-sm font-medium text-sidebar-foreground">
+                Live Supabase workspace
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Project delivery records are managed from the main navigation.
+              </p>
             </div>
           </div>
         </div>
@@ -137,14 +84,14 @@ export function AppShell({ children }: AppShellProps) {
             <BrandMark compact />
           </div>
 
-          <div className="hidden min-w-0 max-w-md flex-1 items-center gap-2 rounded-lg border bg-card px-3 py-2 md:flex">
-            <Search className="size-4 text-muted-foreground" />
-            <input
-              aria-label="Search"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              placeholder="Search projects, actions, risks, documents, or contacts"
-              type="search"
-            />
+          <div className="hidden min-w-0 flex-1 md:block">
+            <p className="truncate text-sm font-medium">
+              Internal project delivery workspace
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              Use the navigation to manage projects, actions, risks, documents,
+              contacts, reports, and AI tools.
+            </p>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -159,30 +106,6 @@ export function AppShell({ children }: AppShellProps) {
                 New project
               </Link>
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <Bell />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-9 gap-2 px-2"
-                  aria-label="Open account menu"
-                >
-                  <Avatar className="size-7">
-                    <AvatarFallback>EP</AvatarFallback>
-                  </Avatar>
-                  <ChevronDown className="hidden size-4 text-muted-foreground sm:block" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Eneridge PMO</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Workspace settings</DropdownMenuItem>
-                <DropdownMenuItem>Sign out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </header>
 

@@ -46,6 +46,23 @@ function getSupabaseClientOrThrow() {
   return createSupabaseBrowserClient()
 }
 
+function isMissingProjectStageColumnError(message: string) {
+  return (
+    message.includes("project_stage") &&
+    (message.includes("schema cache") ||
+      message.includes("column") ||
+      message.includes("Could not find"))
+  )
+}
+
+function withoutProjectStage<T extends ProjectCreateInput | ProjectUpdateInput>(
+  input: T
+) {
+  const fallbackInput = { ...input }
+  delete fallbackInput.project_stage
+  return fallbackInput
+}
+
 export async function getProjects() {
   const supabase = getSupabaseClientOrThrow()
   const { data, error } = await supabase
@@ -85,14 +102,30 @@ export async function getProjectById(id: string) {
 
 export async function createProject(input: ProjectCreateInput) {
   const supabase = getSupabaseClientOrThrow()
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("projects")
     .insert(input)
     .select("*")
     .single()
 
+  if (error && isMissingProjectStageColumnError(error.message)) {
+    const fallbackInput = withoutProjectStage(input)
+    const retry = await supabase
+      .from("projects")
+      .insert(fallbackInput)
+      .select("*")
+      .single()
+
+    data = retry.data
+    error = retry.error
+  }
+
   if (error) {
     throw new ProjectDataError(error.message)
+  }
+
+  if (!data) {
+    throw new ProjectDataError("Project was not returned after create.")
   }
 
   return data
@@ -100,15 +133,32 @@ export async function createProject(input: ProjectCreateInput) {
 
 export async function updateProject(id: string, input: ProjectUpdateInput) {
   const supabase = getSupabaseClientOrThrow()
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("projects")
     .update(input)
     .eq("id", id)
     .select("*")
     .single()
 
+  if (error && isMissingProjectStageColumnError(error.message)) {
+    const fallbackInput = withoutProjectStage(input)
+    const retry = await supabase
+      .from("projects")
+      .update(fallbackInput)
+      .eq("id", id)
+      .select("*")
+      .single()
+
+    data = retry.data
+    error = retry.error
+  }
+
   if (error) {
     throw new ProjectDataError(error.message)
+  }
+
+  if (!data) {
+    throw new ProjectDataError("Project was not returned after update.")
   }
 
   return data

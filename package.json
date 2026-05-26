@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "qa:step4c": "node scripts/qa-step-4c.mjs"
+    "qa:step4c": "node scripts/qa-step-4c.mjs",
+    "qa:step5": "node scripts/qa-step-5-documents.mjs",
+    "qa:step6": "node scripts/qa-step-6-contacts.mjs",
+    "qa:step7": "node scripts/qa-step-7-financials.mjs",
+    "qa:step8": "node scripts/qa-step-8-ai.mjs",
+    "qa:step9": "node scripts/qa-step-9-email.mjs",
+    "qa:mvp": "node scripts/qa-mvp.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
